@@ -15,7 +15,7 @@ class Username(validators.UnicodeString):
     """Validates that the user input matches ``valid_username``, strips and
       coerces to lowercase.
       
-      If it isn't a valid, raises an exception::
+      If it isn't valid, raises an exception::
       
           >>> Username.to_python('%^Inv@l|d')
           Traceback (most recent call last):
@@ -45,7 +45,7 @@ class Username(validators.UnicodeString):
 class Password(validators.UnicodeString):
     """Strips and validates that the user input is a ``valid_password``.
       
-      If it isn't a valid, raises an exception::
+      If it isn't valid, raises an exception::
       
           >>> Password.to_python('short')
           Traceback (most recent call last):
@@ -76,7 +76,7 @@ class Email(validators.Email):
     """Patch ``validators.Email`` with ``validators.UnicodeString``s 
       ``_to_python`` method.
       
-      If it isn't a valid, raises an exception::
+      If it isn't valid, raises an exception::
       
           >>> Email.to_python('foo')
           Traceback (most recent call last):
@@ -110,7 +110,7 @@ class Email(validators.Email):
 class RequestPath(validators.UnicodeString):
     """Valid `/request/path`.
       
-      If it isn't a valid, raises an exception::
+      If it isn't valid, raises an exception::
       
           >>> RequestPath.to_python('://blah')
           Traceback (most recent call last):
@@ -141,7 +141,7 @@ class RequestPath(validators.UnicodeString):
 class Digest(validators.UnicodeString):
     """Must be a valid hex digest.
       
-      If it isn't a valid, raises an exception::
+      If it isn't valid, raises an exception::
       
           >>> Digest.to_python('ab$$')
           Traceback (most recent call last):
@@ -170,7 +170,7 @@ class Digest(validators.UnicodeString):
 
 
 class UniqueUsername(Username):
-    """``Username`` hasn't already been taken.
+    """A ``Username`` that hasn't already been taken.
       
       Setup::
       
@@ -207,7 +207,7 @@ class UniqueUsername(Username):
     
 
 class UniqueEmail(Email):
-    """``Email`` that hasn't already been taken.
+    """An ``Email`` that hasn't already been taken.
       
       Setup::
       
