@@ -27,6 +27,8 @@ def forbidden_view(request):
           >>> _unauthenticated_userid = view.unauthenticated_userid
           >>> view.unauthenticated_userid = Mock()
           >>> mock_request = Mock()
+          >>> mock_request.path = '/forbidden/page'
+          >>> mock_request.route_url.return_value = 'http://foo.com/login'
       
       If the user is already logged in, it means they don't have the requisit
       permission, so we raise a 403 Forbidden error::
@@ -38,8 +40,6 @@ def forbidden_view(request):
       
       Otherwise we redirect to the login page::
       
-          >>> mock_request.path = '/forbidden/page'
-          >>> mock_request.route_url.return_value = 'http://foo.com/login'
           >>> view.unauthenticated_userid.return_value = None
           >>> response = forbidden_view(mock_request)
           >>> kwargs = {'_query': (('next', '/forbidden/page'),)}
