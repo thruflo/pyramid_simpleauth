@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 
-"""Provides ``AuthRoot`` traversal root factory."""
-
-import logging
-logger = logging.getLogger(__name__)
+"""Provides ``Root`` traversal root factory."""
 
 from pyramid.security import Allow, Authenticated, Everyone
 
 from .model import get_existing_user
 from .schema import Username, Invalid
 
-class AuthRoot(object):
+class Root(object):
     """Root object of the simpleauth resource tree.
       
       Setup::
@@ -23,7 +20,7 @@ class AuthRoot(object):
       Tries to get username by key::
       
           >>> tree.get_existing_user.return_value = '<user>'
-          >>> root = AuthRoot(None)
+          >>> root = Root(None)
           >>> root['username']
           '<user>'
           >>> tree.get_existing_user.assert_called_with(username='username')

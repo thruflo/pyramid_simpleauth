@@ -119,6 +119,8 @@ class RequestPath(validators.UnicodeString):
       
       Otherwise strips and returns as unicode::
       
+          >>> RequestPath.to_python(None)
+          u''
           >>> RequestPath.to_python('/Foo ')
           u'/Foo'
       
@@ -275,6 +277,4 @@ class Login(FlexibleSchema):
     
     username = Username(not_empty=True)
     password = Password(not_empty=True)
-    failed = validators.Bool(not_empty=True)
-    next = RequestPath(not_empty=True)
 

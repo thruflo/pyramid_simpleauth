@@ -2,9 +2,6 @@
 
 """Provides authentication and authorisation views."""
 
-import logging
-logger = logging.getLogger(__name__)
-
 from pyramid.httpexceptions import HTTPForbidden, HTTPFound, HTTPUnauthorized
 from pyramid.security import unauthenticated_userid
 from pyramid.security import forget, remember
@@ -75,38 +72,150 @@ def unauthorised_view(request):
     return HTTPForbidden()
 
 
-@view_config(context=tree.AuthRoot, name='signup', renderer='signup.mako',
+@view_config(context=tree.Root, name='signup', renderer='signup.mako',
         permission=PUBLIC)
 def signup_view(request):
-    """Render and handle signup form."""
-    
-    raise NotImplementedError('Rejig to use distinct user and email classes.')
+    """Render and handle signup form.
+      
+      Setup::
+      
+          >>> from mock import Mock
+          >>> from pyramid.testing import DummyRequest
+          >>> from pyramid_simpleauth import model
+          >>> _get_existing_email = model.get_existing_email
+          >>> _get_existing_user = model.get_existing_user
+          >>> _save = model.save
+          >>> model.save = Mock()
+          >>> model.get_existing_user = Mock()
+          >>> model.get_existing_user.return_value = None
+          >>> model.get_existing_email = Mock()
+          >>> model.get_existing_email.return_value = None
+      
+      If it's not a POST, renders the form::
+      
+          >>> dummy_request = DummyRequest()
+          >>> return_value = signup_view(dummy_request)
+          >>> return_value['renderer'].data
+          {'failed': False}
+      
+      Otherwise it validates the request data against ``schema.Signup``::
+      
+          >>> dummy_request = DummyRequest(post={'foo': 'bar'})
+          >>> return_value = signup_view(dummy_request)
+          >>> return_value['renderer'].data
+          {'failed': True, 'foo': 'bar'}
+      
+      If provided with valid data, it saves a ``User`` with related ``Email``
+      and redirects to the user's profile page::
+      
+          >>> valid_post = {
+          ...     'username': 'thruflo',
+          ...     'email': 'thruflo@gmail.com',
+          ...     'password': 'password',
+          ...     'confirm': 'password'
+          ... }
+          >>> dummy_request = DummyRequest(post=valid_post)
+          >>> dummy_request.registry.settings = {}
+          >>> return_value = signup_view(dummy_request)
+          >>> model.save.called
+          True
+          >>> isinstance(return_value, HTTPFound)
+          True
+          >>> return_value.location
+          'http://example.com/thruflo'
+      
+      Teardown::
+      
+          >>> model.save = _save
+          >>> model.get_existing_user = _get_existing_user
+          >>> model.get_existing_email = _get_existing_email
+      
+    """
     
     form = Form(request, schema=schema.Signup, defaults={'failed': False})
     if request.method == 'POST':
         if form.validate():
-            # Get the form data
             d = form.data
-            args = (d['username'], d['email'], d['password'])
             # Determine whether to skip confirmation.
-            s = request.config.settings
-            skip_confirmation = s.get('auth.skip_confirmation', False)
-            # Create the user and save to the db.
-            user = model.create_user(*args, is_confirmed=skip_confirmation)
-            model.save(user)
-            # Redirect to the index or the confirm page.
-            route_name = 'index' if skip_confirmation else 'confirm'
-            return HTTPFound(location=request.route_url(route_name))
+            s = request.registry.settings
+            should_skip_confirmation = s.get('auth.skip_confirmation', False)
+            # Instantiate the email instance.
+            email = model.Email()
+            email.address = d['email']
+            email.is_confirmed = should_skip_confirmation
+            # Instantiate the user instance.
+            user = model.User()
+            user.username = d['username']
+            user.password = model.encrypt(d['password'])
+            user.emails = [email]
+            # Save to the db.
+            model.save(user) # XXX does this save the email too???
+            # Redirect to the user's profile url.
+            profile_url = request.resource_url(request.context, user.username)
+            return HTTPFound(location=profile_url)
         form.data['failed'] = True
     return {'renderer': FormRenderer(form)}
 
 
-@view_config(context=tree.AuthRoot, name='login', request_method='POST',
+@view_config(context=tree.Root, name='login', request_method='POST',
         xhr=True, renderer='json', permission=PUBLIC)
 def authenticate_view(request):
     """If posted a ``username`` and ``password``, attempt to authenticate the
       user using the credentials provided.  If authentication if successful, 
       return the JSON representation of the authenticated user.
+      
+      Setup::
+      
+          >>> from mock import Mock, MagicMock
+          >>> from pyramid.testing import DummyRequest
+          >>> from pyramid import security
+          >>> from pyramid_simpleauth import model, view
+          >>> _authenticate = model.authenticate
+          >>> _remember = view.remember
+          >>> view.remember = Mock()
+          >>> model.authenticate = Mock()
+      
+      If the request doesn't validate, returns an empty dict::
+      
+          >>> dummy_request = DummyRequest(post={'foo': 'bar'})
+          >>> authenticate_view(dummy_request)
+          {}
+      
+      Otherwise tries to authenticate the credentials::
+      
+          >>> model.authenticate.return_value = None
+          >>> valid_post = {
+          ...     'username': 'thruflo',
+          ...     'password': 'password'
+          ... }
+          >>> dummy_request = DummyRequest(post=valid_post)
+          >>> return_value = authenticate_view(dummy_request)
+          >>> model.authenticate.assert_called_with('thruflo', 'password')
+      
+      If they don't match, returns an empty dict::
+      
+          >>> authenticate_view(dummy_request)
+          {}
+      
+      If they do, remembers the user and returns the user as a dict::
+      
+          >>> mock_user = Mock()
+          >>> mock_user.canonical_id = 'abc'
+          >>> def __json__(*args):
+          ...     return '<user as dict>'
+          >>> mock_user.__json__ = __json__
+          >>> model.authenticate.return_value = mock_user
+          >>> dummy_request = DummyRequest(post=valid_post)
+          >>> return_value = authenticate_view(dummy_request)
+          >>> view.remember.assert_called_with(dummy_request, 'abc')
+          >>> return_value
+          '<user as dict>'
+      
+      Teardown::
+      
+          >>> view.remember = _remember
+          >>> model.authenticate = _authenticate
+      
     """
     
     form = Form(request, schema=schema.Authenticate)
@@ -119,44 +228,166 @@ def authenticate_view(request):
     return {}
 
 
-@view_config(context=tree.AuthRoot, name='login', xhr=False, 
+@view_config(context=tree.Root, name='login', xhr=False, 
         renderer='login.mako', permission=PUBLIC)
 def login_view(request):
     """Render login form.  If posted a ``username`` and ``password``, attempt to
       authenticate the user using the credentials provided.  If authentication
       if successful, redirect the user whence they came.
+      
+      Setup::
+      
+          >>> from mock import Mock, MagicMock
+          >>> from pyramid.testing import DummyRequest
+          >>> from pyramid import security
+          >>> from pyramid_simpleauth import model, view
+          >>> _authenticate = model.authenticate
+          >>> model.authenticate = Mock()
+      
+      If it's not a POST, renders the form::
+      
+          >>> dummy_request = DummyRequest()
+          >>> dummy_request.registry.settings = {}
+          >>> return_value = login_view(dummy_request)
+          >>> return_value['renderer'].data
+          {'failed': False, 'next': u'/'}
+      
+      Otherwise validates the request::
+      
+          >>> dummy_request = DummyRequest(post={'foo': 'bar'})
+          >>> dummy_request.registry.settings = {}
+          >>> return_value = login_view(dummy_request)
+          >>> return_value['renderer'].data['failed']
+          True
+      
+      Otherwise tries to authenticate the credentials::
+      
+          >>> model.authenticate.return_value = None
+          >>> valid_post = {
+          ...     'username': 'thruflo',
+          ...     'password': 'password'
+          ... }
+          >>> dummy_request = DummyRequest(post=valid_post)
+          >>> dummy_request.registry.settings = {}
+          >>> return_value = login_view(dummy_request)
+          >>> model.authenticate.assert_called_with('thruflo', 'password')
+      
+      If they don't match::
+      
+          >>> return_value['renderer'].data['failed']
+          True
+      
+      If they do, redirects with the user's canonical id remembered::
+      
+          >>> mock_user = Mock()
+          >>> mock_user.canonical_id = 'abc'
+          >>> model.authenticate.return_value = mock_user
+          >>> dummy_request = DummyRequest(post=valid_post)
+          >>> dummy_request.registry.settings = {}
+          >>> return_value = login_view(dummy_request)
+          >>> isinstance(return_value, HTTPFound)
+          True
+          >>> return_value.location
+          '/'
+      
+      Redirecting to ``next`` if provided::
+      
+          >>> data = {
+          ...     'username': 'thruflo',
+          ...     'password': 'password',
+          ...     'next': '/foo/bar'
+          ... }
+          >>> dummy_request = DummyRequest(post=data)
+          >>> dummy_request.registry.settings = {}
+          >>> return_value = login_view(dummy_request)
+          >>> return_value.location
+          '/foo/bar'
+      
+      n.b.: If ``next`` is invalid, it defaults to '/' rather than failing::
+      
+          >>> data['next'] = '$do.evil(h4x);'
+          >>> dummy_request = DummyRequest(post=data)
+          >>> return_value = login_view(dummy_request)
+          >>> return_value.location
+          '/'
+      
+      Teardown::
+      
+          >>> model.authenticate = _authenticate
+      
     """
     
-    raise NotImplementedError(
-        """XXX Need to use the settings to potentially provide Twitter auth
-          option.  Presumably either both, one or neither.  If both, then
-          do we render a link to Twitter on the form and reconcile users?
-          Also what about providing easy Twitter connect account?
-        """
-    )
-    
-    next = request.params.get('next') or request.route_path('index')
-    defaults = {
-        'failed': False, 
-        'next': next
-    }
-    form = Form(request, schema=schema.Login, defaults=defaults)
+    # Get the default url to redirect to after a successful login.
+    settings = request.registry.settings
+    default_next = settings.get('simpleauth.default_after_login_url', '/')
+    # Validate the next param.
+    next_ = request.params.get('next', request.POST.get('next', default_next))
+    try:
+        next_ = schema.RequestPath.to_python(next_)
+    except schema.Invalid as err:
+        next_ = default_next
+    # Validate the rest of the user input.
+    form = Form(request, schema=schema.Login, defaults={'failed': False})
     if request.method == 'POST':
         if form.validate():
             d = form.data
             user = model.authenticate(d['username'], d['password'])
             if user:
                 headers = remember(request, user.canonical_id)
-                return HTTPFound(location=next, headers=headers)
-        logger.debug(form.data)
-        logger.debug(form.errors)
+                return HTTPFound(location=next_, headers=headers)
         form.data['failed'] = True
+    # Set ``next`` no matter what.
+    form.data['next'] = next_
     return {'renderer': FormRenderer(form)}
 
 
-@view_config(context=tree.AuthRoot, name='logout', permission='logout')
+@view_config(context=tree.Root, name='logout', permission='logout')
 def logout_view(request):
+    """Log the user out and redirect.
+      
+      Setup::
+      
+          >>> from mock import Mock
+          >>> from pyramid.testing import DummyRequest
+          >>> from pyramid_simpleauth import view
+          >>> _HTTPFound = view.HTTPFound
+          >>> _forget = view.forget
+          >>> view.forget = Mock()
+          >>> view.forget.return_value = '<headers>'
+          >>> view.HTTPFound = Mock()
+          >>> view.HTTPFound.return_value = '<redirect>'
+      
+      Call ``forget(request)`` and redirect to '/'::
+      
+          >>> dummy_request = DummyRequest()
+          >>> dummy_request.registry.settings = {}
+          >>> logout_view(dummy_request)
+          '<redirect>'
+          >>> kwargs = {'location': '/', 'headers': '<headers>'}
+          >>> view.HTTPFound.assert_called_with(**kwargs)
+      
+      Or ``simpleauth.after_logout_url``::
+      
+          >>> view.HTTPFound = Mock()
+          >>> dummy_request.registry.settings = {
+          ...     'simpleauth.after_logout_url': '/foo/bar'
+          ... }
+          >>> return_value = logout_view(dummy_request)
+          >>> kwargs = {'location': '/foo/bar', 'headers': '<headers>'}
+          >>> view.HTTPFound.assert_called_with(**kwargs)
+      
+      Teardown::
+      
+          >>> view.HTTPFound = _HTTPFound
+          >>> view.forget = _forget
+      
+    """
+    
+    # Get the default url to redirect to after logout.
+    settings = request.registry.settings
+    next_ = settings.get('simpleauth.after_logout_url', '/')
+    # Unset the user id from the session.
     headers = forget(request)
-    url = request.route_url('index')
-    return HTTPFound(location=url, headers=headers)
+    # Redirect.
+    return HTTPFound(location=next_, headers=headers)
 

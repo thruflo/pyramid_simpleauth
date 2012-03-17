@@ -14,13 +14,10 @@ a different prefix specify:
 
     simpleauth.url_prefix = '/another'
 
-To enable Twitter authentication, use:
+Ditto where to redirect to after login (when a `next` parameter is not passed
+to the login page) and after logout:
 
-    simpleauth.enable_twitter_authentication = true
-    simpleauth.oauth_consumer_key = <yourkey>
-    simpleauth.oauth_consumer_secret = <yoursecret>
-
-XXX todo layout
-XXX todo ...
+    simpleauth.default_after_login_url = '/welcome/back'
+    simpleauth.after_logout_url = '/come/again'
 
 [pyramid_simpleauth]: http://github.com/thruflo/pyramid_simpleauth

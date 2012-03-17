@@ -5,12 +5,8 @@
 __all__ = [
     'Role',
     'User',
-    'Email',
-    'TwitterAccount'
+    'Email'
 ]
-
-import logging
-logger = logging.getLogger(__name__)
 
 import os
 from binascii import hexlify
@@ -19,40 +15,12 @@ from datetime import datetime
 from passlib.apps import custom_app_context as pwd_context
 
 from sqlalchemy import desc
-from sqlalchemy import Column, ForeignKey, Table, MetaData
+from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy import Boolean, DateTime, Integer, Unicode, UnicodeText
-from sqlalchemy.ext.declarative import declared_attr, declarative_base
-from sqlalchemy.orm import relationship, scoped_session, sessionmaker
-from zope.sqlalchemy import ZopeTransactionExtension
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import relationship
 
-Session = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
-Base = declarative_base()
-
-def save(instance_or_instances, session=Session):
-    """Save model instance(s) to the db.
-      
-      Setup::
-      
-          >>> from mock import Mock
-          >>> mock_session = Mock()
-      
-      A single instance is added to the session::
-      
-          >>> save('a', session=mock_session)
-          >>> mock_session.add.assert_called_with('a')
-      
-      Multiple instances are all added at the same time::
-      
-          >>> save(['a', 'b'], session=mock_session)
-          >>> mock_session.add_all.assert_called_with(['a', 'b'])
-      
-    """
-    
-    v = instance_or_instances
-    if isinstance(v, list) or isinstance(v, tuple):
-        session.add_all(v)
-    else:
-        session.add(v)
+from pyramid_basemodel import Base, BaseMixin, Session, save
 
 def encrypt(raw_password):
     """Encrypt a raw password into a secure hash using passlib.
@@ -117,19 +85,6 @@ def generate_random_digest(num_bytes=28):
 generate_canonical_id = lambda: generate_random_digest(num_bytes=64)
 generate_confirmation_hash = lambda: generate_random_digest(num_bytes=14)
 
-class BaseMixin(object):
-    """Provides an int ``id`` as primary key, ``version``, ``created`` and
-      ``modified`` columns and a scoped ``self.query`` property.
-    """
-    
-    id =  Column(Integer, primary_key=True)
-    
-    version = Column('v', Integer, default=1)
-    created = Column('c', DateTime, default=datetime.utcnow)
-    modified = Column('m', DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    query = Session.query_property()
-
 class Role(Base, BaseMixin):
     """Role a user may have (like admin or editor)."""
     
@@ -149,7 +104,18 @@ class User(Base, BaseMixin):
     
     roles = relationship("Role", secondary="auth_users_to_roles", lazy="joined")
     emails = relationship("Email", lazy="joined")
-    twitter_accounts = relationship("TwitterAccount", lazy="joined")
+    
+    def __json__(self):
+        """Return a dictionary representation of the ``User`` instance.
+          
+              >>> user = User(username='thruflo')
+              >>> user.__json__()
+              {'username': 'thruflo'}
+          
+        """
+        
+        return {'username': self.username}
+    
 
 class Email(Base, BaseMixin):
     """A user's email address with optional confirmation data."""
@@ -162,20 +128,6 @@ class Email(Base, BaseMixin):
     is_confirmed = Column(Boolean, default=False)
     
     user_id = Column(Integer, ForeignKey('auth_users.id'))
-
-class TwitterAccount(Base, BaseMixin):
-    """A user's twitter account with oauth token data."""
-    
-    __tablename__ = 'auth_twitter_accounts'
-    
-    twitter_id = Column(Integer, unique=True)
-    screen_name = Column(Unicode(20))
-    
-    oauth_token = Column(Unicode(200))
-    oauth_token_secret = Column(Unicode(200))
-    
-    user_id = Column(Integer, ForeignKey('auth_users.id'))
-
 
 def get_existing_user(cls=User, **kwargs):
     """Get an existing user from the filter ``kwargs`` provided.

@@ -1,10 +1,59 @@
 # -*- coding: utf-8 -*-
 
+from pyramid.authentication import SessionAuthenticationPolicy
+from pyramid.authorization import ACLAuthorizationPolicy
+
 from .hooks import get_authenticated_user, get_is_authenticated, get_roles
-from .tree import AuthRoot
+from .tree import Root
 
 def includeme(config):
-    """Allow developers to use ``config.include('pyramid_simpleauth')``."""
+    """Allow developers to use ``config.include('pyramid_simpleauth')``.
+      
+      Setup::
+      
+          >>> from mock import Mock
+          >>> mock_config = Mock()
+          >>> mock_config.registry.settings = {}
+      
+      Adds ``is_authenticated`` and ``user`` properties to the request::
+      
+          >>> includeme(mock_config)
+          >>> args = (get_is_authenticated, 'is_authenticated')
+          >>> mock_config.set_request_property.assert_any_call(*args, reify=True)
+          >>> args = (get_authenticated_user, 'user')
+          >>> mock_config.set_request_property.assert_any_call(*args, reify=True)
+      
+      Exposes the authentication views::
+      
+          >>> args = ('simpleauth', '/auth/*traverse')
+          >>> mock_config.add_route.assert_called_with(*args, factory=Root)
+      
+      Locks down everything by default::
+      
+          >>> mock_config.set_default_permission.assert_called_with('view')
+          >>> mock_config = Mock()
+          >>> mock_config.registry.settings = {
+          ...     'simpleauth.set_default_permission': False
+          ... }
+          >>> includeme(mock_config)
+          >>> mock_config.set_default_permission.called
+          False
+      
+      Sets up authentication and authorisation policies by default::
+      
+          >>> mock_config.set_authentication_policy.called
+          True
+          >>> mock_config.set_authorization_policy.called
+          True
+          >>> mock_config = Mock()
+          >>> mock_config.registry.settings = {'simpleauth.set_auth_policies': False}
+          >>> includeme(mock_config)
+          >>> mock_config.set_authentication_policy.called
+          False
+          >>> mock_config.set_authorization_policy.called
+          False
+      
+    """
     
     # Add ``is_authenticated`` and ``user`` properties to the request.
     settings = config.registry.settings
@@ -13,8 +62,8 @@ def includeme(config):
     
     # Expose the authentication views.
     prefix = settings.get('simpleauth.url_prefix', '/auth')
-    path = '{}/*traverse'.format(prefix)
-    config.add_route('simpleauth', path, factory=AuthRoot)
+    path = '{0}/*traverse'.format(prefix)
+    config.add_route('simpleauth', path, factory=Root)
     
     # Lock down everything by default.
     if not settings.get('simpleauth.set_default_permission') is False:
