@@ -44,11 +44,12 @@ class UserRoot(object):
           >>> from pyramid_simpleauth import tree
           >>> _get_existing_user = tree.get_existing_user
           >>> tree.get_existing_user = Mock()
+          >>> mock_request = Mock()
       
       Tries to get username by key::
       
           >>> tree.get_existing_user.return_value = '<user>'
-          >>> root = UserRoot(None)
+          >>> root = UserRoot(mock_request)
           >>> root['username']
           '<user>'
           >>> tree.get_existing_user.assert_called_with(username='username')
@@ -67,6 +68,18 @@ class UserRoot(object):
           Traceback (most recent call last):
           ...
           KeyError
+      
+      n.b.: Optimises by not hitting the db if the username matches the current
+      authenticated user::
+      
+          >>> tree.get_existing_user = Mock()
+          >>> mock_request.user = Mock()
+          >>> mock_request.user.username = 'username'
+          >>> root = UserRoot(mock_request)
+          >>> root['username'] == mock_request.user
+          True
+          >>> tree.get_existing_user.called
+          False
       
       Teardown::
       
@@ -89,7 +102,13 @@ class UserRoot(object):
         except Invalid:
             pass
         else:
-            existing = get_existing_user(username=key)
+            existing = None
+            # Optimise for a common case: if the username matches the current
+            # user, don't make an additional db query here.
+            if self.request.user and username == self.request.user.username:
+                existing = self.request.user
+            else:
+                existing = get_existing_user(username=key)
             if existing:
                 return existing
         raise KeyError
