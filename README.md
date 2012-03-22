@@ -5,21 +5,50 @@ There are many other auth implementations for Pyramid, including [apex][] and
 [pyramid_signup][] and you can, of course, easily roll your own, for example
 following the excellent [pyramid_auth_demo][].  This package aims to be:
 
-* relatively simple, targeting a limited set of features
-* extensible, with event hooks and overrideable templates
-* performant, with, by default, one sql query per authenticated request
+* relatively simple: with a limited feature set
+* extensible: with event hooks and overrideable templates
+* performant: minimising db queries
 
-# Usage
+# Features
 
-Include the package (e.g. in your main application factory) along with a session
-factory, `pyramid_tm` and `pyramid_basemodel` in the configuration portion of
-your Pyramid app:
+If you install the package and include it in your Pyramid application, it will
+lock down your application and expose views at:
+
+* /auth/signup
+* /auth/login
+* /auth/authenticate (login via AJAX)
+* /auth/logout
+
+You get a `user` instance and an `is_authenticated` flag added to the `request`:
+
+    # e.g.: in a view callable
+    if request.is_authenticated:
+        display = request.user.username
+
+Plus `UserSignedUp`, `UserloggedIn` and `UserLoggedOut` events to subscribe to:
+
+    @subscriber(UserSignedUp)
+    def my_event_handler(event):
+        request = event.request
+        user = event.user
+        # e.g.: send confirmation email
+
+# Install
+
+Install using `pip` or `easy_install`, e.g.:
+
+    pip install pyramid_simpleauth
+
+# Configure
+
+Include the package along with a session factory, `pyramid_tm` and `pyramid_basemodel`
+in the configuration portion of your Pyramid app:
 
     # Configure a session factory, here, we're using `pyramid_beaker`.
     config.include('pyramid_beaker')
     config.set_session_factory(session_factory_from_settings(settings))
     
-    # Either include `pyramid_tm` or deal with commiting transactions yourself.
+    # Either include `pyramid_tm` or deal with committing transactions yourself.
     config.include('pyramid_tm')
     
     # Either include `pyramid_basemodel` and provide an `sqlalchemy.url` in your
@@ -29,29 +58,6 @@ your Pyramid app:
     
     # Include the package.
     config.include('pyramid_simpleauth')
-
-Once that's done, the package locks down your application, exposes views at:
-
-* /auth/signup
-* /auth/login
-* /auth/authenticate (login via AJAX)
-* /auth/logout
-
-Adds a `user` property to the current `request`:
-
-    # e.g.: in a view callable
-    if request.is_authenticated:
-        display = request.user.username
-
-And provides `UserSignedUp`, `UserloggedIn` and `UserLoggedOut` events:
-
-    @subscriber(UserSignedUp)
-    def my_event_handler(event):
-        request = event.request
-        user = event.user
-        # e.g.: send confirmation email
-
-# Templates
 
 The signup and login forms inherit from a base layout template.  You can override
 this base layout template by writing your own, e.g.:
@@ -75,14 +81,12 @@ Then in your main app factory / package configuration use, e.g.:
     config.override_asset(to_override='pyramid_simpleauth:templates/layout.mako',
                           override_with='my_package:my_templates/layout.mako')
 
-Or you can override the signup and login templates individually, e.g.:
+Or you can nuke the signup and login templates directly, e.g.:
 
     config.override_asset(to_override='pyramid_simpleauth:templates/signup.mako',
                           override_with='my_package:my_templates/foo.mako')
     config.override_asset(to_override='pyramid_simpleauth:templates/login.mako',
                           override_with='my_package:my_templates/bar.mako')
-
-# Settings
 
 To change the url path for the authentication views, specify a 
 `simpleauth.url_prefix` in your application's `.ini` configuration:
@@ -90,11 +94,11 @@ To change the url path for the authentication views, specify a
     # defaults to 'auth', resulting in urls that start with `/auth/...`
     simpleauth.url_prefix = 'another'
 
-You can also specify where to redirect to after signup, login and logout.  
-These are all configured using *route names*, with the route being provided
-the additional traversal information of the user's username.  (This means you
-can expose a simple named route, or a hybrid route, as you prefer.  The hybrid
-route will attempt traversal on the username.).
+You can also specify where to redirect to after signup, login and logout. These
+are all configured using *route names*, with the route being provided the 
+additional traversal information of the user's username.  (This means you can 
+expose a simple named route, or a hybrid route, as you prefer.  The hybrid route
+will attempt traversal on the username).
 
 To redirect to a different named route after signup / login or logout use:
 
