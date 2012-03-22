@@ -11,7 +11,7 @@ from pyramid.view import view_config
 from pyramid_simpleform import Form
 from pyramid_simpleform.renderers import FormRenderer
 
-from pyramid_simpleauth import model, schema, tree
+from pyramid_simpleauth import events, model, schema, tree
 
 @view_config(context=HTTPForbidden, permission=PUBLIC)
 def forbidden_view(request):
@@ -72,8 +72,8 @@ def unauthorised_view(request):
     return HTTPForbidden()
 
 
-@view_config(context=tree.Root, name='signup', renderer='signup.mako',
-        permission=PUBLIC)
+@view_config(context=tree.Root, name='signup', permission=PUBLIC,
+        renderer='pyramid_simpleauth:templates/signup.mako')
 def signup_view(request):
     """Render and handle signup form.
       
@@ -81,10 +81,12 @@ def signup_view(request):
       
           >>> from mock import Mock
           >>> from pyramid.testing import DummyRequest
-          >>> from pyramid_simpleauth import model
+          >>> from pyramid_simpleauth import model, view
           >>> _get_existing_email = model.get_existing_email
           >>> _get_existing_user = model.get_existing_user
           >>> _save = model.save
+          >>> _remember = view.remember
+          >>> view.remember = Mock()
           >>> model.save = Mock()
           >>> model.get_existing_user = Mock()
           >>> model.get_existing_user.return_value = None
@@ -105,8 +107,8 @@ def signup_view(request):
           >>> return_value['renderer'].data
           {'failed': True, 'foo': 'bar'}
       
-      If provided with valid data, it saves a ``User`` with related ``Email``
-      and redirects to the user's profile page::
+      If provided with valid data, it saves a ``User`` with related ``Email``,
+      logs them in by calling ``remember`` and redirects to the user's profile::
       
           >>> valid_post = {
           ...     'username': 'thruflo',
@@ -116,16 +118,18 @@ def signup_view(request):
           ... }
           >>> dummy_request = DummyRequest(post=valid_post)
           >>> dummy_request.registry.settings = {}
+          >>> dummy_request.route_url = Mock()
           >>> return_value = signup_view(dummy_request)
           >>> model.save.called
           True
+          >>> view.remember.called
+          True
           >>> isinstance(return_value, HTTPFound)
           True
-          >>> return_value.location
-          'http://example.com/thruflo'
       
       Teardown::
       
+          >>> view.remember = _remember
           >>> model.save = _save
           >>> model.get_existing_user = _get_existing_user
           >>> model.get_existing_email = _get_existing_email
@@ -148,17 +152,21 @@ def signup_view(request):
             user.username = d['username']
             user.password = model.encrypt(d['password'])
             user.emails = [email]
-            # Save to the db.
-            model.save(user) # XXX does this save the email too???
+            # Save the user and email to the db.
+            model.save(user)
+            # Log the user in.
+            remember(request, user.canonical_id)
+            # Fire a ``UserSignedUp`` event.
+            request.registry.notify(events.UserSignedUp(request, user))
             # Redirect to the user's profile url.
-            profile_url = request.resource_url(request.context, user.username)
+            profile_url = request.route_url('simpleauth', traverse=(user.username))
             return HTTPFound(location=profile_url)
         form.data['failed'] = True
     return {'renderer': FormRenderer(form)}
 
 
-@view_config(context=tree.Root, name='login', request_method='POST',
-        xhr=True, renderer='json', permission=PUBLIC)
+@view_config(context=tree.Root, name='authenticate', permission=PUBLIC,
+        renderer='json', request_method='POST', xhr=True)
 def authenticate_view(request):
     """If posted a ``username`` and ``password``, attempt to authenticate the
       user using the credentials provided.  If authentication if successful, 
@@ -223,13 +231,17 @@ def authenticate_view(request):
         d = form.data
         user = model.authenticate(d['username'], d['password'])
         if user:
+            # Remember the logged in user.
             remember(request, user.canonical_id)
+            # Fire a ``UserLoggedIn`` event.
+            request.registry.notify(events.UserLoggedIn(request, user))
+            # Return the user's public data.
             return user.__json__()
     return {}
 
 
-@view_config(context=tree.Root, name='login', xhr=False, 
-        renderer='login.mako', permission=PUBLIC)
+@view_config(context=tree.Root, name='login', permission=PUBLIC,
+        renderer='pyramid_simpleauth:templates/login.mako', xhr=False)
 def login_view(request):
     """Render login form.  If posted a ``username`` and ``password``, attempt to
       authenticate the user using the credentials provided.  If authentication
@@ -333,8 +345,13 @@ def login_view(request):
             d = form.data
             user = model.authenticate(d['username'], d['password'])
             if user:
+                # Remember the logged in user.
                 headers = remember(request, user.canonical_id)
-                return HTTPFound(location=next_, headers=headers)
+                response = HTTPFound(location=next_, headers=headers)
+                # Fire a ``UserLoggedIn`` event.
+                request.registry.notify(events.UserLoggedIn(request, user))
+                # Redirect.
+                return response
         form.data['failed'] = True
     # Set ``next`` no matter what.
     form.data['next'] = next_
@@ -360,6 +377,7 @@ def logout_view(request):
       Call ``forget(request)`` and redirect to '/'::
       
           >>> dummy_request = DummyRequest()
+          >>> dummy_request.user = None
           >>> dummy_request.registry.settings = {}
           >>> logout_view(dummy_request)
           '<redirect>'
@@ -388,6 +406,10 @@ def logout_view(request):
     next_ = settings.get('simpleauth.after_logout_url', '/')
     # Unset the user id from the session.
     headers = forget(request)
+    response = HTTPFound(location=next_, headers=headers)
+    # If there is an authenticated user, fire a ``UserLoggedOut`` event.
+    if request.user:
+        request.registry.notify(events.UserLoggedOut(request, request.user))
     # Redirect.
-    return HTTPFound(location=next_, headers=headers)
+    return response
 
