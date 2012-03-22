@@ -20,6 +20,9 @@ from sqlalchemy import Boolean, DateTime, Integer, Unicode, UnicodeText
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
 
+from pyramid.security import ALL_PERMISSIONS
+from pyramid.security import Allow, Deny
+from pyramid.security import Authenticated, Everyone
 from pyramid_basemodel import Base, BaseMixin, Session, save
 
 def encrypt(raw_password):
@@ -97,6 +100,23 @@ class User(Base, BaseMixin):
     """Model class encapsulating a user."""
     
     __tablename__ = 'auth_users'
+    
+    @property
+    def __acl__(self):
+        """Grants all permissions to ``self.username``::
+          
+              >>> user = User()
+              >>> user.username = 'foo'
+              >>> user.__acl__[1] == (Allow, 'foo', ALL_PERMISSIONS)
+              True
+        """
+        
+        return [
+            (Allow, 'r:admin', ALL_PERMISSIONS),
+            (Allow, self.username, ALL_PERMISSIONS),
+            (Allow, Authenticated, 'view'),
+            (Deny, Everyone, ALL_PERMISSIONS)
+        ]
     
     canonical_id = Column(Unicode(128), default=generate_canonical_id, unique=True)
     username = Column(Unicode(32), unique=True)

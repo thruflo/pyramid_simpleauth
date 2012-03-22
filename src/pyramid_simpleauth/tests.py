@@ -29,8 +29,6 @@ def config_factory(**settings):
     config.include('pyramid_basemodel')
     # Include simpleauth.
     config.include('pyramid_simpleauth')
-    # Run a venusian scan to pick up the declarative configuration.
-    config.scan('pyramid_simpleauth')
     # Return the configurator instance.
     return config
 

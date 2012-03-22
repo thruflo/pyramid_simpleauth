@@ -72,7 +72,7 @@ def unauthorised_view(request):
     return HTTPForbidden()
 
 
-@view_config(context=tree.Root, name='signup', permission=PUBLIC,
+@view_config(context=tree.AuthRoot, name='signup', permission=PUBLIC,
         renderer='pyramid_simpleauth:templates/signup.mako')
 def signup_view(request):
     """Render and handle signup form.
@@ -165,7 +165,7 @@ def signup_view(request):
     return {'renderer': FormRenderer(form)}
 
 
-@view_config(context=tree.Root, name='authenticate', permission=PUBLIC,
+@view_config(context=tree.AuthRoot, name='authenticate', permission=PUBLIC,
         renderer='json', request_method='POST', xhr=True)
 def authenticate_view(request):
     """If posted a ``username`` and ``password``, attempt to authenticate the
@@ -240,7 +240,7 @@ def authenticate_view(request):
     return {}
 
 
-@view_config(context=tree.Root, name='login', permission=PUBLIC,
+@view_config(context=tree.AuthRoot, name='login', permission=PUBLIC,
         renderer='pyramid_simpleauth:templates/login.mako', xhr=False)
 def login_view(request):
     """Render login form.  If posted a ``username`` and ``password``, attempt to
@@ -358,7 +358,7 @@ def login_view(request):
     return {'renderer': FormRenderer(form)}
 
 
-@view_config(context=tree.Root, name='logout', permission='logout')
+@view_config(context=tree.AuthRoot, name='logout', permission='logout')
 def logout_view(request):
     """Log the user out and redirect.
       

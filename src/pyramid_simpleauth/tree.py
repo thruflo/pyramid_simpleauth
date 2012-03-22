@@ -2,13 +2,41 @@
 
 """Provides ``Root`` traversal root factory."""
 
-from pyramid.security import Allow, Authenticated, Everyone
+from pyramid.security import ALL_PERMISSIONS
+from pyramid.security import Allow, Deny
+from pyramid.security import Authenticated, Everyone
 
 from .model import get_existing_user
 from .schema import Username, Invalid
 
-class Root(object):
-    """Root object of the simpleauth resource tree.
+class AuthRoot(object):
+    """Root object of the simpleauth route.
+      
+      Always raises a ``KeyError``:
+      
+          >>> root = AuthRoot(None)
+          >>> root['foo']
+          Traceback (most recent call last):
+          ...
+          KeyError
+      
+    """
+    
+    __name__ = None
+    
+    __acl__ = [
+        (Allow, Everyone, 'logout')
+    ]
+    
+    def __init__(self, request):
+        self.request = request
+    
+    def __getitem__(self, key):
+        raise KeyError
+    
+
+class UserRoot(object):
+    """Root object that gets user's by username.
       
       Setup::
       
@@ -20,7 +48,7 @@ class Root(object):
       Tries to get username by key::
       
           >>> tree.get_existing_user.return_value = '<user>'
-          >>> root = Root(None)
+          >>> root = UserRoot(None)
           >>> root['username']
           '<user>'
           >>> tree.get_existing_user.assert_called_with(username='username')
@@ -49,7 +77,7 @@ class Root(object):
     __name__ = None
     
     __acl__ = [
-        (Allow, Everyone, 'logout')
+        (Deny, Everyone, ALL_PERMISSIONS)
     ]
     
     def __init__(self, request):

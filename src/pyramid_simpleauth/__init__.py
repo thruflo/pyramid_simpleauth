@@ -4,7 +4,7 @@ from pyramid.authentication import SessionAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 
 from .hooks import get_authenticated_user, get_is_authenticated, get_roles
-from .tree import Root
+from .tree import AuthRoot
 
 def includeme(config):
     """Allow developers to use ``config.include('pyramid_simpleauth')``.
@@ -27,7 +27,7 @@ def includeme(config):
       
           >>> args = ('simpleauth', 'auth/*traverse')
           >>> kwargs = {
-          ...     'factory': Root,
+          ...     'factory': AuthRoot,
           ...     'use_global_views': True
           ... }
           >>> mock_config.add_route.assert_called_with(*args, **kwargs)
@@ -67,7 +67,7 @@ def includeme(config):
     # Expose the authentication views.
     prefix = settings.get('simpleauth.url_prefix', 'auth')
     path = '{0}/*traverse'.format(prefix)
-    config.add_route('simpleauth', path, factory=Root, use_global_views=True)
+    config.add_route('simpleauth', path, factory=AuthRoot, use_global_views=True)
     
     # Lock down everything by default.
     if not settings.get('simpleauth.set_default_permission') is False:
