@@ -78,6 +78,7 @@ def includeme(config):
     if not settings.get('simpleauth.set_auth_policies') is False:
         authn_policy = SessionAuthenticationPolicy(callback=get_roles)
         authz_policy = ACLAuthorizationPolicy()
-        config.set_authentication_policy(authn_policy)
         config.set_authorization_policy(authz_policy)
+        config.set_authentication_policy(authn_policy)
+    
 
