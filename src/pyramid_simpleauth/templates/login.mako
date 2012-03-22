@@ -3,7 +3,7 @@
 
 <%def name="subtitle()">Login</%def>
 
-${renderer.begin(request.resource_url(request.root, 'login'))}
+${renderer.begin(request.path)}
   ${renderer.csrf_token()}
   ${renderer.hidden("next")}
   % if renderer.form.data['failed']:
@@ -21,6 +21,6 @@ ${renderer.end()}
 <hr />
 <p>
   Don't have an account yet?
-  <a href="${request.resource_url(request.context, 'signup')}">
+  <a href="${request.route_url('simpleauth', traverse=('signup',))}">
     Sign up now</a>.
 </p>

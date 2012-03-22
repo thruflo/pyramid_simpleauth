@@ -39,8 +39,11 @@ def forbidden_view(request):
       
           >>> view.unauthenticated_userid.return_value = None
           >>> response = forbidden_view(mock_request)
-          >>> kwargs = {'_query': (('next', '/forbidden/page'),)}
-          >>> mock_request.route_url.assert_called_with('login', **kwargs)
+          >>> kwargs = {
+          ...     '_query': (('next', '/forbidden/page'),),
+          ...     'traverse': ('login',)
+          ... }
+          >>> mock_request.route_url.assert_called_with('simpleauth', **kwargs)
           >>> response.location
           'http://foo.com/login'
           >>> response.status
@@ -54,7 +57,8 @@ def forbidden_view(request):
     
     if unauthenticated_userid(request):
         return HTTPForbidden()
-    url = request.route_url('login', _query=(('next', request.path),))
+    query = (('next', request.path),)
+    url = request.route_url('simpleauth', traverse=('login',), _query=query)
     return HTTPFound(location=url)
 
 
