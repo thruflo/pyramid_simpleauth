@@ -2,7 +2,6 @@
 
 """Functional tests for ``pyramid_simpleauth``."""
 
-import logging
 import unittest
 
 try: # pragma: no cover
