@@ -49,7 +49,7 @@ class Root(object):
     __name__ = None
     
     __acl__ = [
-        (Allow, Authenticated, 'logout')
+        (Allow, Everyone, 'logout')
     ]
     
     def __init__(self, request):
