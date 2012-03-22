@@ -14,7 +14,7 @@ from datetime import datetime
 
 from passlib.apps import custom_app_context as pwd_context
 
-from sqlalchemy import desc
+from sqlalchemy import desc, event
 from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy import Boolean, DateTime, Integer, Unicode, UnicodeText
 from sqlalchemy.ext.declarative import declared_attr
@@ -223,3 +223,29 @@ users_to_roles = Table(
     Column('user_id', Integer, ForeignKey('auth_users.id')),
     Column('role_id', Integer, ForeignKey('auth_roles.id'))
 )
+
+# Set canonical_id on a new user instance when created (not when loaded from
+# the db).
+def set_canonical_id(user, *args, **kwargs):
+    """Set ``user.canonical_id`` if not provided in the ``kwargs``.
+      
+      Setup::
+      
+          >>> from mock import Mock
+          >>> mock_user = Mock()
+          >>> mock_user.canonical_id = None
+      
+      Test::
+      
+          >>> set_canonical_id(mock_user, canonical_id='a')
+          >>> mock_user.canonical_id
+          >>> set_canonical_id(mock_user)
+          >>> len(mock_user.canonical_id)
+          128
+      
+    """
+    
+    if not kwargs.has_key('canonical_id'):
+        user.canonical_id = generate_canonical_id()
+
+event.listen(User, 'init', set_canonical_id)
