@@ -87,14 +87,39 @@ Or you can override the signup and login templates individually, e.g.:
 To change the url path for the authentication views, specify a 
 `simpleauth.url_prefix` in your application's `.ini` configuration:
 
-    # defaults to 'auth'
+    # defaults to 'auth', resulting in urls that start with `/auth/...`
     simpleauth.url_prefix = 'another'
 
-To change where to redirect to after login (when a `next` parameter is not passed
-to the login page) and after logout:
+You can also specify where to redirect to after signup, login and logout.  
+These are all configured using *route names*, with the route being provided
+the additional traversal information of the user's username.  (This means you
+can expose a simple named route, or a hybrid route, as you prefer.  The hybrid
+route will attempt traversal on the username.).
 
-    simpleauth.default_after_login_url = '/welcome/back'
-    simpleauth.after_logout_url = '/come/again'
+To redirect to a different named route after signup / login or logout use:
+
+    simpleauth.after_signup_route = 'another' # defaults to 'users'
+    simpleauth.after_login_route = 'another' # defaults to 'index'
+    simpleauth.after_logout_route = 'another' # defaults to 'index'
+
+Note that on login, a `next` parameter passed to the login page will take
+precedence over the specific route.
+
+By default the app redirects after signup to a route named 'users'.  This is
+not exposed by `pyramid_simpleauth` by default but the package does provide a 
+`.tree.UserRoot` root factory that looks up `.model.User`s by username and a
+default `__acl__` property on the `.model.User` class.  These are entirely
+optional: you can choose instead to use a different named route, or expose
+a simple named route using, e.g.:
+
+    config.add_route('users', 'some/path')
+
+However, if you want to use the machinery provided, with the baked in security
+and traversal, you can expose a user profile view, or perhaps a welcome page at 
+`/users/:username` using, e.g.:
+
+    config.add_route('users', 'users/*traverse', factory=UserRoot,
+                     use_global_views=True)
 
 To avoid configuring the authorisation and authentication policies (e.g.: if you're
 going to set these up yourself) use:
