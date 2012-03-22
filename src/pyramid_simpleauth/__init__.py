@@ -25,8 +25,12 @@ def includeme(config):
       
       Exposes the authentication views::
       
-          >>> args = ('simpleauth', '/auth/*traverse')
-          >>> mock_config.add_route.assert_called_with(*args, factory=Root)
+          >>> args = ('simpleauth', 'auth/*traverse')
+          >>> kwargs = {
+          ...     'factory': Root,
+          ...     'use_global_views': True
+          ... }
+          >>> mock_config.add_route.assert_called_with(*args, **kwargs)
       
       Locks down everything by default::
       
@@ -61,9 +65,9 @@ def includeme(config):
     config.set_request_property(get_authenticated_user, 'user', reify=True)
     
     # Expose the authentication views.
-    prefix = settings.get('simpleauth.url_prefix', '/auth')
+    prefix = settings.get('simpleauth.url_prefix', 'auth')
     path = '{0}/*traverse'.format(prefix)
-    config.add_route('simpleauth', path, factory=Root)
+    config.add_route('simpleauth', path, factory=Root, use_global_views=True)
     
     # Lock down everything by default.
     if not settings.get('simpleauth.set_default_permission') is False:
