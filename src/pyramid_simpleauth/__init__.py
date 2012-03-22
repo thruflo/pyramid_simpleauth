@@ -81,4 +81,6 @@ def includeme(config):
         config.set_authorization_policy(authz_policy)
         config.set_authentication_policy(authn_policy)
     
+    # Run a venusian scan to pick up the declarative configuration.
+    config.scan('pyramid_simpleauth')
 
