@@ -100,8 +100,36 @@ class TestSignup(unittest.TestCase):
             'confirm': 'password'
         }
         res = self.app.post('/auth/signup', post_data, status=302)
-        # The response redirects to the user's profile page.
-        self.assertTrue(res.headers['Location'] == 'http://localhost/auth/thruflo')
+        # The response redirects to `/` by default with no routes or settings.
+        self.assertTrue(res.headers['Location'] == 'http://localhost/')
+        # The response redirects to the `users` route if exposed.
+        self.config = config_factory()
+        self.config.add_route('users', 'some/path')
+        self.app = TestApp(self.config.make_wsgi_app())
+        post_data = {
+            'username': 'thruflo2',
+            'email': 'foo+2@gmail.com',
+            'password': 'password',
+            'confirm': 'password'
+        }
+        res = self.app.post('/auth/signup', post_data, status=302)
+        self.assertTrue(res.headers['Location'] == 'http://localhost/some/path')
+        # The response redirects to the `simpleauth.after_signup_route` route
+        # if specified.
+        settings = {
+            'simpleauth.after_signup_route': 'flobble'
+        }
+        self.config = config_factory(**settings)
+        self.config.add_route('flobble', 'wob')
+        self.app = TestApp(self.config.make_wsgi_app())
+        post_data = {
+            'username': 'thruflo3',
+            'email': 'foo+3@gmail.com',
+            'password': 'password',
+            'confirm': 'password'
+        }
+        res = self.app.post('/auth/signup', post_data, status=302)
+        self.assertTrue(res.headers['Location'] == 'http://localhost/wob')
     
     def test_signup_event(self):
         """Signup fires a ``UserSignedUp`` event."""
@@ -158,6 +186,13 @@ class TestLogin(unittest.TestCase):
         res = self.app.get('/auth/login')
         self.failUnless('<input id="username" name="username"' in res.body)
     
+    def test_render_login_next(self):
+        """A GET request to the login view will pass through the `next` param."""
+        
+        res = self.app.get('/auth/login?next=/foo/bar')
+        tag = '<input id="next" name="next" type="hidden" value="/foo/bar" />'
+        self.failUnless(tag in res.body)
+    
     def test_login(self):
         """Login remembers the user."""
         
@@ -191,6 +226,28 @@ class TestLogin(unittest.TestCase):
         }
         res = self.app.post('/auth/login', post_data, status=302)
         self.assertTrue(res.headers['Location'] == 'http://localhost/foo/bar')
+        # If `next` is not provided, redirects to `/`
+        post_data = {
+            'username': 'thruflo',
+            'password': 'password'
+        }
+        res = self.app.post('/auth/login', post_data, status=302)
+        self.assertTrue(res.headers['Location'] == 'http://localhost/')
+        # Or the 'index' route if exposed.
+        self.config = config_factory()
+        self.config.add_route('index', 'some/path')
+        self.app = TestApp(self.config.make_wsgi_app())
+        res = self.app.post('/auth/login', post_data, status=302)
+        self.assertTrue(res.headers['Location'] == 'http://localhost/some/path')
+        # Or the `simpleauth.after_logout_route` route if specified and exposed.
+        settings = {
+            'simpleauth.after_login_route': 'flobble'
+        }
+        self.config = config_factory(**settings)
+        self.config.add_route('flobble', 'wob')
+        self.app = TestApp(self.config.make_wsgi_app())
+        res = self.app.post('/auth/login', post_data, status=302)
+        self.assertTrue(res.headers['Location'] == 'http://localhost/wob')
     
     def test_login_event(self):
         """Login fires a ``UserLoggedIn`` event."""
@@ -348,8 +405,25 @@ class TestLogout(unittest.TestCase):
     def test_logout_redirects(self):
         """Logout redirects."""
         
+        # The response redirects to `/` by default with no routes or settings.
         res = self.app.get('/auth/logout', status=302)
         self.assertTrue(res.headers['Location'] == 'http://localhost/')
+        # The response redirects to the `index` route if exposed.
+        self.config = config_factory()
+        self.config.add_route('index', 'some/path')
+        self.app = TestApp(self.config.make_wsgi_app())
+        res = self.app.get('/auth/logout', status=302)
+        self.assertTrue(res.headers['Location'] == 'http://localhost/some/path')
+        # The response redirects to the `simpleauth.after_logout_route` route
+        # if specified.
+        settings = {
+            'simpleauth.after_logout_route': 'flobble'
+        }
+        self.config = config_factory(**settings)
+        self.config.add_route('flobble', 'wob')
+        self.app = TestApp(self.config.make_wsgi_app())
+        res = self.app.get('/auth/logout', status=302)
+        self.assertTrue(res.headers['Location'] == 'http://localhost/wob')
     
     def test_loggedout_event(self):
         """Logout fires a ``UserLoggedOut`` event."""

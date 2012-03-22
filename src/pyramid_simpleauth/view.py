@@ -2,6 +2,8 @@
 
 """Provides authentication and authorisation views."""
 
+from zope.interface.registry import ComponentLookupError
+
 from pyramid.httpexceptions import HTTPForbidden, HTTPFound, HTTPUnauthorized
 from pyramid.security import unauthenticated_userid
 from pyramid.security import forget, remember
@@ -163,8 +165,13 @@ def signup_view(request):
             # Fire a ``UserSignedUp`` event.
             request.registry.notify(events.UserSignedUp(request, user))
             # Redirect to the user's profile url.
-            profile_url = request.route_url('simpleauth', traverse=(user.username))
-            return HTTPFound(location=profile_url)
+            settings = request.registry.settings
+            route_name = settings.get('simpleauth.after_signup_route', 'users')
+            try:
+                location = request.route_url(route_name, traverse=(user.username,))
+            except (KeyError, ComponentLookupError):
+                location = '/'
+            return HTTPFound(location=location)
         form.data['failed'] = True
     return {'renderer': FormRenderer(form)}
 
@@ -266,7 +273,7 @@ def login_view(request):
           >>> dummy_request.registry.settings = {}
           >>> return_value = login_view(dummy_request)
           >>> return_value['renderer'].data
-          {'failed': False, 'next': u'/'}
+          {'failed': False}
       
       Otherwise validates the request::
       
@@ -333,15 +340,12 @@ def login_view(request):
       
     """
     
-    # Get the default url to redirect to after a successful login.
-    settings = request.registry.settings
-    default_next = settings.get('simpleauth.default_after_login_url', '/')
     # Validate the next param.
-    next_ = request.params.get('next', request.POST.get('next', default_next))
+    next_ = request.params.get('next', request.POST.get('next'))
     try:
         next_ = schema.RequestPath.to_python(next_)
     except schema.Invalid as err:
-        next_ = default_next
+        next_ = None
     # Validate the rest of the user input.
     form = Form(request, schema=schema.Login, defaults={'failed': False})
     if request.method == 'POST':
@@ -351,14 +355,24 @@ def login_view(request):
             if user:
                 # Remember the logged in user.
                 headers = remember(request, user.canonical_id)
-                response = HTTPFound(location=next_, headers=headers)
+                # Work out where to redirect to next.
+                if next_:
+                    location = next_
+                else: # Get the default url to redirect to.
+                    settings = request.registry.settings
+                    route_name = settings.get('simpleauth.after_login_route', 'index')
+                    try:
+                        location = request.route_url(route_name, traverse=(user.username,))
+                    except (KeyError, ComponentLookupError):
+                        location = '/'
                 # Fire a ``UserLoggedIn`` event.
                 request.registry.notify(events.UserLoggedIn(request, user))
                 # Redirect.
-                return response
+                return HTTPFound(location=location, headers=headers)
         form.data['failed'] = True
     # Set ``next`` no matter what.
-    form.data['next'] = next_
+    if next_:
+        form.data['next'] = next_
     return {'renderer': FormRenderer(form)}
 
 
@@ -388,16 +402,6 @@ def logout_view(request):
           >>> kwargs = {'location': '/', 'headers': '<headers>'}
           >>> view.HTTPFound.assert_called_with(**kwargs)
       
-      Or ``simpleauth.after_logout_url``::
-      
-          >>> view.HTTPFound = Mock()
-          >>> dummy_request.registry.settings = {
-          ...     'simpleauth.after_logout_url': '/foo/bar'
-          ... }
-          >>> return_value = logout_view(dummy_request)
-          >>> kwargs = {'location': '/foo/bar', 'headers': '<headers>'}
-          >>> view.HTTPFound.assert_called_with(**kwargs)
-      
       Teardown::
       
           >>> view.HTTPFound = _HTTPFound
@@ -407,13 +411,18 @@ def logout_view(request):
     
     # Get the default url to redirect to after logout.
     settings = request.registry.settings
-    next_ = settings.get('simpleauth.after_logout_url', '/')
-    # Unset the user id from the session.
-    headers = forget(request)
-    response = HTTPFound(location=next_, headers=headers)
+    route_name = settings.get('simpleauth.after_logout_route', 'index')
+    traverse = (request.user.username,) if request.user else ()
+    try:
+        location = request.route_url(route_name, traverse=traverse)
+    except (KeyError, ComponentLookupError):
+        location = '/'
     # If there is an authenticated user, fire a ``UserLoggedOut`` event.
     if request.user:
         request.registry.notify(events.UserLoggedOut(request, request.user))
+    # Unset the user id from the session.
+    headers = forget(request)
     # Redirect.
-    return response
+    return HTTPFound(location=location, headers=headers)
+    
 
