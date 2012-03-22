@@ -93,18 +93,18 @@ def get_roles(canonical_id, request):
           >>> mock_request = Mock()
           >>> mock_user = Mock()
           >>> mock_role = Mock()
-          >>> mock_role.name = 'editor'
+          >>> mock_role.name = u'editor'
           >>> mock_user.roles = [mock_role]
           >>> mock_request.user = mock_user
       
       Test::
       
           >>> get_roles(None, mock_request)
-          ['editor']
+          [u'r:editor']
        
     """
     
     user = request.user
     if user:
-        return [role.name for role in user.roles]
+        return [u'r:{0}'.format(role.name) for role in user.roles]
 
