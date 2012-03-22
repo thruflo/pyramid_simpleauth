@@ -11,11 +11,26 @@ following the excellent [pyramid_auth_demo][].  This package aims to be:
 
 # Usage
 
-To use, include the package (e.g. in your main application factory):
+Include the package (e.g. in your main application factory) along with a session
+factory, `pyramid_tm` and `pyramid_basemodel` in the configuration portion of
+your Pyramid app:
 
+    # Configure a session factory, here, we're using `pyramid_beaker`.
+    config.include('pyramid_beaker')
+    config.set_session_factory(session_factory_from_settings(settings))
+    
+    # Either include `pyramid_tm` or deal with commiting transactions yourself.
+    config.include('pyramid_tm')
+    
+    # Either include `pyramid_basemodel` and provide an `sqlalchemy.url` in your
+    # `.ini` settings, or bind the SQLAlchemy models and scoped `Session` to a
+    # database engine yourself.
+    config.include('pyramid_basemodel')
+    
+    # Include the package.
     config.include('pyramid_simpleauth')
 
-This locks down your application and exposes:
+Once that's done, the package locks down your application, exposes views at:
 
 * /auth/signup
 * /auth/login
@@ -90,6 +105,33 @@ To avoid locking down your app to require a 'view' permission for all views by
 default (secure but perhaps draconian):
 
     simpleauth.set_default_permission = False
+
+# Tests
+
+I've only tested the package under Python 2.6 and 2.7 atm.  It should work under
+Python 3 but I have problems installing the `passlib` dependency (or any decent
+password encryption library) under Python 3.
+
+You'll need `nose`, `coverage`, `mock` and `WebTest`.  Then, e.g.:
+
+    $ nosetests --cover-package=pyramid_simpleauth --cover-tests --with-doctest --with-coverage
+    ..........................................
+    Name                        Stmts   Miss  Cover   Missing
+    ---------------------------------------------------------
+    pyramid_simpleauth             19      0   100%   
+    pyramid_simpleauth.events      26      0   100%   
+    pyramid_simpleauth.hooks       13      0   100%   
+    pyramid_simpleauth.model       56      0   100%   
+    pyramid_simpleauth.schema      83      0   100%   
+    pyramid_simpleauth.tests      197      0   100%   
+    pyramid_simpleauth.tree        18      0   100%   
+    pyramid_simpleauth.view        76      0   100%   
+    ---------------------------------------------------------
+    TOTAL                         488      0   100%   
+    ----------------------------------------------------------------------
+    Ran 42 tests in 16.408s
+
+    OK
 
 [apex]: https://github.com/cd34/apex
 [pyramid]: http://pyramid.readthedocs.org
