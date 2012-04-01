@@ -27,24 +27,29 @@ class IUserLoggedOut(Interface):
 class UserSignedUp(object):
     """An instance of this class is emitted whenever a new user signs up."""
     
-    def __init__(self, request, user):
+    def __init__(self, request, user, data=None):
         self.request = request
         self.user = user
+        self.data = data
     
 
 @implementer(IUserLoggedIn)
 class UserLoggedIn(object):
     """An instance of this class is emitted whenever a user logs in."""
     
-    def __init__(self, request, user):
+    def __init__(self, request, user, data=None):
         self.request = request
         self.user = user
+        self.data = data
+    
 
 @implementer(IUserLoggedOut)
 class UserLoggedOut(object):
     """An instance of this class is emitted whenever a user logs out."""
     
-    def __init__(self, request, user):
+    def __init__(self, request, user, data=None):
         self.request = request
         self.user = user
+        self.data = data
+    
 
