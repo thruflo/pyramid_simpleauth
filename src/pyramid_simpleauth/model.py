@@ -20,10 +20,15 @@ from sqlalchemy import Boolean, DateTime, Integer, Unicode, UnicodeText
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
 
+from zope.interface import implements
+
+from pyramid.decorator import reify
 from pyramid.security import ALL_PERMISSIONS
 from pyramid.security import Allow, Deny
 from pyramid.security import Authenticated, Everyone
 from pyramid_basemodel import Base, BaseMixin, Session, save
+
+from .interfaces import IEmail, IRole, IUser
 
 def encrypt(raw_password):
     """Encrypt a raw password into a secure hash using passlib.
@@ -91,6 +96,8 @@ generate_confirmation_hash = lambda: generate_random_digest(num_bytes=14)
 class Role(Base, BaseMixin):
     """Role a user may have (like admin or editor)."""
     
+    implements(IRole)
+    
     __tablename__ = 'auth_roles'
     
     name = Column(Unicode(33), unique=True)
@@ -98,6 +105,8 @@ class Role(Base, BaseMixin):
 
 class User(Base, BaseMixin):
     """Model class encapsulating a user."""
+    
+    implements(IUser)
     
     __tablename__ = 'auth_users'
     
@@ -123,7 +132,20 @@ class User(Base, BaseMixin):
     password = Column(Unicode(120))
     
     roles = relationship("Role", secondary="auth_users_to_roles", lazy="joined")
-    emails = relationship("Email", lazy="joined")
+    emails = relationship("Email", lazy="joined", backref="user")
+    
+    @reify
+    def is_admin(self):
+        """Does the user have a role called 'r:admin'.
+          
+              >>> raise NotImplementedError
+          
+        """
+        
+        for item in self.roles:
+            if item.name == 'r:admin':
+                return True
+        return False
     
     def __json__(self):
         """Return a dictionary representation of the ``User`` instance.
@@ -139,6 +161,8 @@ class User(Base, BaseMixin):
 
 class Email(Base, BaseMixin):
     """A user's email address with optional confirmation data."""
+    
+    implements(IEmail)
     
     __tablename__ = 'auth_emails'
     
