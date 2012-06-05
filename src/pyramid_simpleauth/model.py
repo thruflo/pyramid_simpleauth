@@ -135,11 +135,29 @@ class User(Base, BaseMixin):
     emails = relationship("Email", lazy="joined", backref="user",
             cascade="all, delete-orphan", single_parent=True)
     
-    @reify
+    @property
     def is_admin(self):
-        """Does the user have a role called 'r:admin'.
+        """Does the user have a role called 'admin'?
           
-              >>> raise NotImplementedError
+          If the user doesn't have any roles, it's ``False``::
+          
+              >>> u = User()
+              >>> u.is_admin
+              False
+          
+          If they have roles but none named ``admin`` then returns ``False``::
+          
+              >>> r = Role(name='foo')
+              >>> u.roles.append(r)
+              >>> u.is_admin
+              False
+          
+          If they do have a role named ``admin``, then returns ``True``::
+          
+              >>> r = Role(name='admin')
+              >>> u.roles.append(r)
+              >>> u.is_admin
+              True
           
         """
         
