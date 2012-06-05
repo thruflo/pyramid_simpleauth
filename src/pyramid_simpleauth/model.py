@@ -143,7 +143,7 @@ class User(Base, BaseMixin):
         """
         
         for item in self.roles:
-            if item.name == 'r:admin':
+            if item.name == 'admin':
                 return True
         return False
     
