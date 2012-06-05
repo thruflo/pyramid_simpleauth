@@ -132,7 +132,8 @@ class User(Base, BaseMixin):
     password = Column(Unicode(120))
     
     roles = relationship("Role", secondary="auth_users_to_roles", lazy="joined")
-    emails = relationship("Email", lazy="joined", backref="user")
+    emails = relationship("Email", lazy="joined", backref="user",
+            cascade="all, delete-orphan", single_parent=True)
     
     @reify
     def is_admin(self):
