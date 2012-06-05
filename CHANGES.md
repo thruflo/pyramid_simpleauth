@@ -1,4 +1,8 @@
 
+# 0.2.3
+
+Minor tweaks and `is_admin` bugfix.
+
 # 0.2.2
 
 Added interfaces module.
