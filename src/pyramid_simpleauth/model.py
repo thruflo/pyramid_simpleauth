@@ -115,14 +115,14 @@ class User(Base, BaseMixin):
         """Grants all permissions to ``self.username``::
           
               >>> user = User()
-              >>> user.username = 'foo'
-              >>> user.__acl__[1] == (Allow, 'foo', ALL_PERMISSIONS)
+              >>> user.canonical_id = 'user_id'
+              >>> user.__acl__[1] == (Allow, 'user_id', ALL_PERMISSIONS)
               True
         """
         
         return [
             (Allow, 'r:admin', ALL_PERMISSIONS),
-            (Allow, self.username, ALL_PERMISSIONS),
+            (Allow, self.canonical_id, ALL_PERMISSIONS),
             (Allow, Authenticated, 'view'),
             (Deny, Everyone, ALL_PERMISSIONS)
         ]
