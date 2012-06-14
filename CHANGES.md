@@ -1,4 +1,8 @@
 
+# 0.2.4
+
+Tweak validating unique emails, so emails must be confirmed to be taken.
+
 # 0.2.3
 
 Minor tweaks and `is_admin` bugfix.
