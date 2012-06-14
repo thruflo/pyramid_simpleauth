@@ -240,7 +240,8 @@ class UniqueEmail(Email):
     def validate_python(self, value, state):
         super(UniqueEmail, self).validate_python(value, state)
         from .model import get_existing_email
-        if get_existing_email(value):
+        existing = get_existing_email(value)
+        if existing and existing.is_confirmed:
             msg = self.message("taken", state)
             raise validators.Invalid(msg, value, state)
     
