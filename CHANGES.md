@@ -1,4 +1,8 @@
 
+# 0.2.5
+
+Add `request.user_json` property.
+
 # 0.2.4
 
 Tweak validating unique emails, so emails must be confirmed to be taken.
