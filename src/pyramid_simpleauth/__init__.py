@@ -3,7 +3,8 @@
 from pyramid.authentication import SessionAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 
-from .hooks import get_authenticated_user, get_is_authenticated, get_roles
+from .hooks import get_authenticated_user, get_is_authenticated
+from .hooks import get_roles, get_user_json
 from .tree import AuthRoot
 
 def includeme(config):
@@ -15,12 +16,14 @@ def includeme(config):
           >>> mock_config = Mock()
           >>> mock_config.registry.settings = {}
       
-      Adds ``is_authenticated`` and ``user`` properties to the request::
+      Adds ``is_authenticated``, ``user`` and ``user_json`` properties to the request::
       
           >>> includeme(mock_config)
           >>> args = (get_is_authenticated, 'is_authenticated')
           >>> mock_config.set_request_property.assert_any_call(*args, reify=True)
           >>> args = (get_authenticated_user, 'user')
+          >>> mock_config.set_request_property.assert_any_call(*args, reify=True)
+          >>> args = (get_user_json, 'user_json')
           >>> mock_config.set_request_property.assert_any_call(*args, reify=True)
       
       Exposes the authentication views::
@@ -63,6 +66,7 @@ def includeme(config):
     settings = config.registry.settings
     config.set_request_property(get_is_authenticated, 'is_authenticated', reify=True)
     config.set_request_property(get_authenticated_user, 'user', reify=True)
+    config.set_request_property(get_user_json, 'user_json', reify=True)
     
     # Expose the authentication views.
     prefix = settings.get('simpleauth.url_prefix', 'auth')

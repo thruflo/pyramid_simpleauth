@@ -2,6 +2,8 @@
 
 """Provides functions that get the authenticated user from the ``request``."""
 
+import json
+
 from pyramid.security import unauthenticated_userid
 from .model import get_existing_user
 
@@ -81,6 +83,32 @@ def get_authenticated_user(request):
     canonical_id = unauthenticated_userid(request)
     if canonical_id:
         return get_existing_user(canonical_id=canonical_id)
+
+def get_user_json(request):
+    """Return a JSON string representation of ``request.user``.
+      
+          >>> from mock import MagicMock as Mock
+          >>> mock_request = Mock()
+      
+      If there's no authenticated user, returns ``json.dumps({})``::
+      
+          >>> mock_request.user = None
+          >>> get_user_json(mock_request)
+          '{}'
+      
+      Otherwise ``json.dumps(user.__json__())``:
+      
+          >>> mock_request.user = Mock()
+          >>> mock_request.user.__json__ = Mock()
+          >>> mock_request.user.__json__.return_value = {'username': 'thruflo'}
+          >>> get_user_json(mock_request)
+          '{"username": "thruflo"}'
+      
+    """
+    
+    user = request.user
+    data = user.__json__() if user else {}
+    return json.dumps(data)
 
 
 # Authorization group finder.

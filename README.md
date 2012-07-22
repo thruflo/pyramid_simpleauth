@@ -33,6 +33,9 @@ Plus `UserSignedUp`, `UserloggedIn` and `UserLoggedOut` events to subscribe to:
         user = event.user
         # e.g.: send confirmation email
 
+And a `request.user_json` property (useful to write into a template to pass data
+to the client side).
+
 # Install
 
 Install using `pip` or `easy_install`, e.g.:
