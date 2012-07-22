@@ -14,7 +14,7 @@ def _read(file_name):
 
 setup(
     name = 'pyramid_simpleauth',
-    version = '0.2.5',
+    version = '0.2.6',
     description = 'Session based authentication and role based security \
                    for a Pyramid web application.',
     author = 'James Arthur',

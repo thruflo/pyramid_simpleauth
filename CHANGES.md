@@ -1,4 +1,8 @@
 
+# 0.2.6
+
+Added `request.is_post_login` and `request.is_post_signup`.
+
 # 0.2.5
 
 Add `request.user_json` property.
