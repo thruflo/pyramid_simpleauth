@@ -218,12 +218,20 @@ class UniqueEmail(Email):
           >>> _get_existing_email = model.get_existing_email
           >>> model.get_existing_email = Mock()
       
-      If the email exists, raises an exception::
+      If the email doesn't exist, or hasn't been confirmed, validates::
       
           >>> model.get_existing_email.return_value = None
           >>> UniqueEmail.to_python('thruflo@gmail.com')
           u'thruflo@gmail.com'
-          >>> model.get_existing_email.return_value = '<email>'
+          >>> mock_email = Mock()
+          >>> mock_email.is_confirmed = False
+          >>> model.get_existing_email.return_value = mock_email
+          >>> UniqueEmail.to_python('thruflo@gmail.com')
+          u'thruflo@gmail.com'
+      
+      Otherwise raises an exception::
+      
+          >>> mock_email.is_confirmed = True
           >>> UniqueEmail.to_python('thruflo@gmail.com')
           Traceback (most recent call last):
           ...
