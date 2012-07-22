@@ -33,8 +33,10 @@ Plus `UserSignedUp`, `UserloggedIn` and `UserLoggedOut` events to subscribe to:
         user = event.user
         # e.g.: send confirmation email
 
-And a `request.user_json` property (useful to write into a template to pass data
-to the client side).
+Flags at `request.is_post_login` and `request.is_post_signup`, stored in the session, 
+that allow you to test whether the current request is immediately after a login or 
+signup event.  And a `request.user_json` property (useful to write into a template 
+to pass data to the client side).
 
 # Install
 

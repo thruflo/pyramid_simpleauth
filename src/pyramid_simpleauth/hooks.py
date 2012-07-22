@@ -2,6 +2,9 @@
 
 """Provides functions that get the authenticated user from the ``request``."""
 
+import logging
+logger = logging.getLogger(__name__)
+
 import json
 
 from pyramid.security import unauthenticated_userid
@@ -135,4 +138,68 @@ def get_roles(canonical_id, request):
     user = request.user
     if user:
         return [u'r:{0}'.format(role.name) for role in user.roles]
+
+
+# Session process flags.
+def get_is_post_login(request):
+    """If the session contains a true value for ``is_post_login``, then wipe
+      it and return ``True``.  Otherwise, return ``False``.
+      
+      Setup::
+      
+          >>> from mock import Mock
+          >>> mock_request = Mock()
+      
+      If the session contains a true value for ``is_post_login``, then wipe
+      it and return ``True``::
+      
+          >>> mock_request.session = {'is_post_login': True}
+          >>> get_is_post_login(mock_request)
+          True
+          >>> mock_request.session
+          {}
+      
+      Otherwise, return ``False``::
+      
+          >>> get_is_post_login(mock_request)
+          False
+      
+    """
+    
+    is_post_login = request.session.get('is_post_login', False)
+    if is_post_login:
+        del request.session['is_post_login']
+        return True
+    return False
+
+def get_is_post_signup(request):
+    """If the session contains a true value for ``is_post_signup``, then wipe
+      it and return ``True``.  Otherwise, return ``False``.
+      
+      Setup::
+      
+          >>> from mock import Mock
+          >>> mock_request = Mock()
+      
+      If the session contains a true value for ``is_post_signup``, then wipe
+      it and return ``True``::
+      
+          >>> mock_request.session = {'is_post_signup': True}
+          >>> get_is_post_signup(mock_request)
+          True
+          >>> mock_request.session
+          {}
+      
+      Otherwise, return ``False``::
+      
+          >>> get_is_post_signup(mock_request)
+          False
+      
+    """
+    
+    is_post_signup = request.session.get('is_post_signup', False)
+    if is_post_signup:
+        del request.session['is_post_signup']
+        return True
+    return False
 
