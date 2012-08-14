@@ -4,6 +4,8 @@
 
 import unittest
 
+from pyramid_basemodel import Session
+
 try: # pragma: no cover
     from webtest import TestApp
 except ImportError: # pragma: no cover
@@ -33,7 +35,8 @@ def config_factory(**settings):
     return config
 
 
-class TestSignup(unittest.TestCase):
+class BaseTestCase(unittest.TestCase):
+
     def setUp(self):
         """Configure the Pyramid application."""
         
@@ -43,8 +46,22 @@ class TestSignup(unittest.TestCase):
     def tearDown(self):
         """Make sure the session is cleared between tests."""
         
-        from pyramid_basemodel import Session
         Session.remove()
+    
+    def makeUser(self, username, password):
+        """Create and save a user with the credentials provided."""
+        
+        import transaction
+        from pyramid_simpleauth import model
+        user = model.User()
+        user.username = username
+        user.password = model.encrypt(password)
+        model.save(user)
+        transaction.commit()
+        return user
+
+
+class TestSignup(BaseTestCase):
     
     def test_render_signup_form(self):
         """A GET request to the signup view should render the signup form."""
@@ -156,29 +173,7 @@ class TestSignup(unittest.TestCase):
         self.assertTrue(isinstance(event.user, User))
     
 
-class TestLogin(unittest.TestCase):
-    def setUp(self):
-        """Configure the Pyramid application."""
-        
-        self.config = config_factory()
-        self.app = TestApp(self.config.make_wsgi_app())
-    
-    def tearDown(self):
-        """Make sure the session is cleared between tests."""
-        
-        from pyramid_basemodel import Session
-        Session.remove()
-    
-    def makeUser(self, username, password):
-        """Create and save a user with the credentials provided."""
-        
-        import transaction
-        from pyramid_simpleauth import model
-        user = model.User()
-        user.username = username
-        user.password = model.encrypt(password)
-        model.save(user)
-        transaction.commit()
+class TestLogin(BaseTestCase):
     
     def test_render_login_form(self):
         """A GET request to the login view should render the login form."""
@@ -273,29 +268,7 @@ class TestLogin(unittest.TestCase):
         self.assertTrue(isinstance(event.user, User))
     
 
-class TestAuthenticate(unittest.TestCase):
-    def setUp(self):
-        """Configure the Pyramid application."""
-        
-        self.config = config_factory()
-        self.app = TestApp(self.config.make_wsgi_app())
-    
-    def tearDown(self):
-        """Make sure the session is cleared between tests."""
-        
-        from pyramid_basemodel import Session
-        Session.remove()
-    
-    def makeUser(self, username, password):
-        """Create and save a user with the credentials provided."""
-        
-        import transaction
-        from pyramid_simpleauth import model
-        user = model.User()
-        user.username = username
-        user.password = model.encrypt(password)
-        model.save(user)
-        transaction.commit()
+class TestAuthenticate(BaseTestCase):
     
     def test_authenticate_requires_xhr(self):
         """Authenticate must be called with an XMLHTTPRequest."""
@@ -362,29 +335,7 @@ class TestAuthenticate(unittest.TestCase):
         self.assertTrue(isinstance(event.user, User))
     
 
-class TestLogout(unittest.TestCase):
-    def setUp(self):
-        """Configure the Pyramid application."""
-        
-        self.config = config_factory()
-        self.app = TestApp(self.config.make_wsgi_app())
-    
-    def tearDown(self):
-        """Make sure the session is cleared between tests."""
-        
-        from pyramid_basemodel import Session
-        Session.remove()
-    
-    def makeUser(self, username, password):
-        """Create and save a user with the credentials provided."""
-        
-        import transaction
-        from pyramid_simpleauth import model
-        user = model.User()
-        user.username = username
-        user.password = model.encrypt(password)
-        model.save(user)
-        transaction.commit()
+class TestLogout(BaseTestCase):
     
     def test_logout(self):
         """Logout forgets the user."""
@@ -468,3 +419,84 @@ class TestLogout(unittest.TestCase):
         self.assertFalse(mock_subscriber.called)
     
 
+class TestChangePassword(BaseTestCase):
+
+    def authenticate(self, user):
+        "Authenticate user"
+        post_data = {
+            'username': 'thruflo',
+            'password': 'password'
+        }
+        headers = {'X-Requested-With': 'XMLHttpRequest'}
+        return self.app.post('/auth/authenticate', post_data, headers=headers)
+
+    def test_wrong_old_password(self):
+        "No password change if old password is not corret"
+
+        # Create a user.
+        user = self.makeUser('thruflo', 'password')
+        Session.add(user)
+        old_hash = user.password
+
+        self.authenticate(user)
+
+        # Attempt to change password.
+        post_data = {
+            'old_password': 'foobarbaz',
+            'new_password': 'swordpas',
+            'new_confirm':  'swordpas',
+        }
+        res = self.app.post('/auth/change_password', post_data)
+
+        # Verify that password hasn't changed
+        Session.add(user)
+        Session.refresh(user)
+        self.assertTrue("Wrong current password" in res.body)
+        self.assertEquals(user.password, old_hash)
+
+    def test_new_passwords_dont_match(self):
+        "No password change if new passwords don't match"
+
+        # Create a user.
+        user = self.makeUser('thruflo', 'password')
+        Session.add(user)
+        old_hash = user.password
+
+        self.authenticate(user)
+
+        # Attempt to change password.
+        post_data = {
+            'old_password': 'password',
+            'new_password': 'swordpas',
+            'new_confirm':  'oswdrpsa',
+        }
+        res = self.app.post('/auth/change_password', post_data)
+
+        # Verify that password hasn't changed
+        Session.add(user)
+        Session.refresh(user)
+        self.assertTrue("Fields do not match" in res.body)
+        self.assertEquals(user.password, old_hash)
+
+    def test_sucess(self):
+        "If all conditions are met, change password"
+
+        # Create a user.
+        user = self.makeUser('thruflo', 'password')
+        Session.add(user)
+        old_hash = user.password
+
+        self.authenticate(user)
+
+        # Attempt to change password.
+        post_data = {
+            'old_password': 'password',
+            'new_password': 'swordpas',
+            'new_confirm':  'swordpas',
+        }
+        self.app.post('/auth/change_password', post_data)
+
+        # Verify that password has changed
+        Session.add(user)
+        Session.refresh(user)
+        self.assertNotEquals(user.password, old_hash)

@@ -6,50 +6,65 @@ from zope.interface import implementer, Attribute, Interface
 
 class IUserSignedUp(Interface):
     """An event type that is emitted after a new user signs up."""
-    
+
     request = Attribute('The request object.')
     user = Attribute('The user who signed up.')
 
 class IUserLoggedIn(Interface):
     """An event type that is emitted after a user logs in."""
-    
+
     request = Attribute('The request object.')
     user = Attribute('The user who logged in.')
 
 class IUserLoggedOut(Interface):
     """An event type that is emitted after a user logs out."""
-    
+
     request = Attribute('The request object')
     user = Attribute('The user who logged out.')
+
+class IUserChangedPassword(Interface):
+    """An event type that is emitted after a user changes its password."""
+
+    request = Attribute('The request object')
+    user = Attribute('The user who changes its password.')
 
 
 @implementer(IUserSignedUp)
 class UserSignedUp(object):
     """An instance of this class is emitted whenever a new user signs up."""
-    
+
     def __init__(self, request, user, data=None):
         self.request = request
         self.user = user
         self.data = data
-    
+
 
 @implementer(IUserLoggedIn)
 class UserLoggedIn(object):
     """An instance of this class is emitted whenever a user logs in."""
-    
+
     def __init__(self, request, user, data=None):
         self.request = request
         self.user = user
         self.data = data
-    
+
 
 @implementer(IUserLoggedOut)
 class UserLoggedOut(object):
     """An instance of this class is emitted whenever a user logs out."""
-    
+
     def __init__(self, request, user, data=None):
         self.request = request
         self.user = user
         self.data = data
-    
 
+
+@implementer(IUserChangedPassword)
+class UserChangedPassword(object):
+
+    """An instance of this class is emitted whenever a user changes its password."""
+
+    def __init__(self, request, user, data=None):
+        self.request = request
+        self.user = user
+        self.data = data
