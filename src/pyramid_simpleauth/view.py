@@ -428,23 +428,24 @@ def logout_view(request):
 
 
 @view_config(context=tree.AuthRoot, name='change_password',
-        permission=PUBLIC,
+             permission='change_password',
              renderer='pyramid_simpleauth:templates/change_password.mako')
 def change_password_view(request):
     """Change user password."""
     form = Form(request, schema=schema.ChangePassword, defaults={'failed': False})
+    user = request.user
     if request.method == 'POST':
         if form.validate():
             d = form.data
-            user = model.authenticate(request.user.username, d['old_password'])
+            user = model.authenticate(user.username, d['old_password'])
             if user:
                 # Save new password to the db
                 user.password = model.encrypt(d['new_password'])
                 model.save(user)
-                request.registry.notify(events.UserChangedPassword(request, request.user))
+                request.registry.notify(events.UserChangedPassword(request, user))
                 form.data['failed'] = False
             else:
                 form.errors['old_password'] = 'Wrong current password.'
                 form.data['failed'] = True
 
-    return {'renderer': FormRenderer(form), 'user': request.user}
+    return {'renderer': FormRenderer(form), 'user': user}
