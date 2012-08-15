@@ -447,4 +447,4 @@ def change_password_view(request):
                 form.errors['old_password'] = 'Wrong current password.'
                 form.data['failed'] = True
 
-    return {'renderer': FormRenderer(form)}
+    return {'renderer': FormRenderer(form), 'user': request.user}
