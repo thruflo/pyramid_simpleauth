@@ -16,6 +16,16 @@ from pyramid_simpleform.renderers import FormRenderer
 from pyramid_simpleauth import events, model, schema, tree
 
 
+def validate_next_param(request):
+    "Validate the next param"
+    next_ = request.params.get('next', request.POST.get('next'))
+    try:
+        next_ = schema.RequestPath.to_python(next_)
+    except schema.Invalid as err:
+        next_ = None
+    return next_
+
+
 @view_config(context=HTTPForbidden, permission=PUBLIC)
 def forbidden_view(request):
     """Called when a user has been denied access to a resource or view.
@@ -341,12 +351,7 @@ def login_view(request):
 
     """
 
-    # Validate the next param.
-    next_ = request.params.get('next', request.POST.get('next'))
-    try:
-        next_ = schema.RequestPath.to_python(next_)
-    except schema.Invalid as err:
-        next_ = None
+    next_ = validate_next_param(request)
     # Validate the rest of the user input.
     form = Form(request, schema=schema.Login, defaults={'failed': False})
     if request.method == 'POST':
@@ -432,6 +437,7 @@ def logout_view(request):
              renderer='pyramid_simpleauth:templates/change_password.mako')
 def change_password_view(request):
     """Change user password."""
+    next_ = validate_next_param(request)
     form = Form(request, schema=schema.ChangePassword, defaults={'failed': False})
     user = request.user
     if request.method == 'POST':
@@ -444,8 +450,12 @@ def change_password_view(request):
                 model.save(user)
                 request.registry.notify(events.UserChangedPassword(request, user))
                 form.data['failed'] = False
+                location = next_ or '/'
+                return HTTPFound(location=location)
             else:
                 form.errors['old_password'] = 'Wrong current password.'
                 form.data['failed'] = True
 
+    if next_:
+        form.data['next'] = next_
     return {'renderer': FormRenderer(form), 'user': user}

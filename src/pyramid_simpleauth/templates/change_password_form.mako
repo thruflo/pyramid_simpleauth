@@ -11,6 +11,7 @@ ${renderer.begin(request.path)}
   ${form.field(renderer, 'password', 'old_password', label="Current password")}
   ${form.field(renderer, 'password', 'new_password', label="New password")}
   ${form.field(renderer, 'password', 'new_confirm', label="Confirm new password")}
+  ${form.field(renderer, 'hidden', 'next', label=False)}
   <div class="buttons">
     ${renderer.submit("submit", "Change password")}
   </div>

@@ -445,6 +445,7 @@ class TestChangePassword(BaseTestCase):
             'old_password': 'foobarbaz',
             'new_password': 'swordpas',
             'new_confirm':  'swordpas',
+            'next':         '/foo/bar',
         }
         res = self.app.post('/auth/change_password', post_data)
 
@@ -452,6 +453,7 @@ class TestChangePassword(BaseTestCase):
         Session.add(user)
         Session.refresh(user)
         self.assertTrue("Wrong current password" in res.body)
+        self.assertTrue("/foo/bar" in res.body)
         self.assertEquals(user.password, old_hash)
 
     def test_new_passwords_dont_match(self):
@@ -493,10 +495,14 @@ class TestChangePassword(BaseTestCase):
             'old_password': 'password',
             'new_password': 'swordpas',
             'new_confirm':  'swordpas',
+            'next':         '/foo/bar',
         }
-        self.app.post('/auth/change_password', post_data)
+        res = self.app.post('/auth/change_password', post_data)
 
         # Verify that password has changed
         Session.add(user)
         Session.refresh(user)
         self.assertNotEquals(user.password, old_hash)
+
+        # Verify redirect
+        self.assertEquals(res.headers['Location'], 'http://localhost/foo/bar')
