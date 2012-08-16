@@ -2,9 +2,11 @@
 
 """Functional tests for ``pyramid_simpleauth``."""
 
+from base64 import urlsafe_b64encode
 import unittest
 
 from pyramid_basemodel import Session
+import transaction
 
 try: # pragma: no cover
     from webtest import TestApp
@@ -51,7 +53,6 @@ class BaseTestCase(unittest.TestCase):
     def makeUser(self, username, password):
         """Create and save a user with the credentials provided."""
         
-        import transaction
         from pyramid_simpleauth import model
         user = model.User()
         user.username = username
@@ -506,3 +507,57 @@ class TestChangePassword(BaseTestCase):
 
         # Verify redirect
         self.assertEquals(res.headers['Location'], 'http://localhost/foo/bar')
+
+
+class TestConfirmEmailAddress(BaseTestCase):
+
+    def makeUserWithEmail(self):
+        from pyramid_simpleauth import model
+        user = self.makeUser(u'thruflo', u'password')
+        Session.add(user)
+        user.emails.append(model.Email(address=u'foo@example.com'))
+        transaction.commit()
+        Session.add(user)
+        return user
+
+    def test_success(self):
+        "Token is valid, email address should be confirmed"
+        # Create a user
+        user = self.makeUserWithEmail()
+
+        # Sanity check
+        self.assertFalse(user.emails[0].is_confirmed)
+
+        # Attempt to confirm email address
+        email = user.emails[0]
+        encoded_id = urlsafe_b64encode(str(email.id))
+        hash_part = email.confirmation_hash
+        url = '/auth/confirm/%s/%s' % (encoded_id, hash_part)
+        res = self.app.get(url)
+        self.assertTrue('success' in res.body)
+
+        # Verify that email address has been confirmed
+        Session.add(email)
+        Session.refresh(email)
+        self.assertTrue(email.is_confirmed)
+
+    def test_failure(self):
+        "Token is invalid, email address should not be confirmed"
+        # Create a user
+        user = self.makeUserWithEmail()
+
+        # Sanity check
+        self.assertFalse(user.emails[0].is_confirmed)
+
+        # Attempt to confirm email address
+        email = user.emails[0]
+        encoded_id = urlsafe_b64encode(str(email.id))
+        hash_part = email.confirmation_hash + 'randomstuff'
+        url = '/auth/confirm/%s/%s' % (encoded_id, hash_part)
+        res = self.app.get(url)
+        self.assertTrue('invalid' in res.body)
+
+        # Verify that email address has been confirmed
+        Session.add(email)
+        Session.refresh(email)
+        self.assertFalse(email.is_confirmed)

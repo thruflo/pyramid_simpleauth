@@ -2,6 +2,8 @@
 
 """Provides authentication and authorisation views."""
 
+from base64 import urlsafe_b64decode
+
 from zope.interface.registry import ComponentLookupError
 
 from pyramid.httpexceptions import HTTPForbidden, HTTPFound, HTTPUnauthorized
@@ -459,3 +461,20 @@ def change_password_view(request):
     if next_:
         form.data['next'] = next_
     return {'renderer': FormRenderer(form), 'user': user}
+
+
+@view_config(context=tree.AuthRoot, name="confirm", permission=PUBLIC,
+             renderer='pyramid_simpleauth:templates/confirm_email_address.mako')
+def confirm_email_address(request):
+    """Confirm email address using a confirmation link"""
+    encoded_id, confirmation_hash = request.matchdict['traverse'][1:]
+    email_id = urlsafe_b64decode(encoded_id.encode('utf-8'))
+    email = model.Email.query.filter_by(id=email_id,
+            confirmation_hash=confirmation_hash).first()
+    if email:
+        email.is_confirmed = True
+        model.save(email)
+        success = True
+    else:
+        success = False 
+    return {'success': success}
