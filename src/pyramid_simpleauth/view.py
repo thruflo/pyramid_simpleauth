@@ -470,7 +470,7 @@ def confirm_email_address(request):
     try:
         encoded_id, confirmation_hash = request.matchdict['traverse'][1:]
         email_id = urlsafe_b64decode(encoded_id.encode('utf-8'))
-    except ValueError:
+    except (ValueError, TypeError):
         return {}
     email = model.Email.query.filter_by(id=email_id,
             confirmation_hash=confirmation_hash).first()

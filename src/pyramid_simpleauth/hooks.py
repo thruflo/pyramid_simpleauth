@@ -202,4 +202,3 @@ def get_is_post_signup(request):
         del request.session['is_post_signup']
         return True
     return False
-

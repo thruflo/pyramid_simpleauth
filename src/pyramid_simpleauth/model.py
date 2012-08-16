@@ -243,6 +243,13 @@ def get_existing_email(address, cls=Email):
     query = cls.query.filter_by(address=address)
     return query.first()
 
+
+def get_confirmation_link(request, email):
+    """Return a confirmation link for `email`."""
+    base_url = request.route_url('simpleauth', traverse=('confirm',))
+    return '/'.join([base_url, email.confirmation_token])
+
+
 def authenticate(username, raw_password):
     """Get an authenticated user corresponding to the credentials provided.
       

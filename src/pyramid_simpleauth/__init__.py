@@ -76,7 +76,7 @@ def includeme(config):
     # Add ``is_post_login`` and ``is_post_signup`` request properties.
     config.set_request_property(get_is_post_login, 'is_post_login', reify=True)
     config.set_request_property(get_is_post_signup, 'is_post_signup', reify=True)
-    
+
     # Expose the authentication views.
     prefix = settings.get('simpleauth.url_prefix', 'auth')
     path = '{0}/*traverse'.format(prefix)

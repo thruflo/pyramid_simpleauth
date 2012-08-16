@@ -2,8 +2,8 @@
 
 """Functional tests for ``pyramid_simpleauth``."""
 
-from base64 import urlsafe_b64encode
 import unittest
+from mock import Mock
 
 from pyramid_basemodel import Session
 import transaction
@@ -152,7 +152,6 @@ class TestSignup(BaseTestCase):
     def test_signup_event(self):
         """Signup fires a ``UserSignedUp`` event."""
         
-        from mock import Mock
         from pyramid_simpleauth.events import UserSignedUp
         from pyramid_simpleauth.model import User
         # Setup event listener.
@@ -248,7 +247,6 @@ class TestLogin(BaseTestCase):
     def test_login_event(self):
         """Login fires a ``UserLoggedIn`` event."""
         
-        from mock import Mock
         from pyramid_simpleauth.events import UserLoggedIn
         from pyramid_simpleauth.model import User
         # Setup event listener.
@@ -314,7 +312,6 @@ class TestAuthenticate(BaseTestCase):
     def test_authenticate_logged_in_event(self):
         """Authenticate fires a ``UserLoggedIn`` event."""
         
-        from mock import Mock
         from pyramid_simpleauth.events import UserLoggedIn
         from pyramid_simpleauth.model import User
         # Setup event listener.
@@ -380,7 +377,6 @@ class TestLogout(BaseTestCase):
     def test_loggedout_event(self):
         """Logout fires a ``UserLoggedOut`` event."""
         
-        from mock import Mock
         from pyramid_simpleauth.events import UserLoggedOut
         from pyramid_simpleauth.model import User
         # Setup event listener.
@@ -407,7 +403,6 @@ class TestLogout(BaseTestCase):
           authenticated user.
         """
         
-        from mock import Mock
         from pyramid_simpleauth.events import UserLoggedOut
         # Setup event listener.
         mock_subscriber = Mock()
@@ -519,7 +514,6 @@ class TestConfirmEmailAddress(BaseTestCase):
         self.config = config_factory(**settings)
         self.config.add_route('success_path', 'victory_path')
         self.app = TestApp(self.config.make_wsgi_app())
-        self.app = TestApp(self.config.make_wsgi_app())
 
     def makeUserWithEmail(self):
         "Helper method that creates a user with an email"
@@ -531,6 +525,13 @@ class TestConfirmEmailAddress(BaseTestCase):
         Session.add(user)
         return user
 
+    def makeConfirmationLink(self, email):
+        "Helper method that makes a valid confirmation link"
+        from pyramid_simpleauth.model import get_confirmation_link
+        request = Mock()
+        request.route_url.return_value = '/auth/confirm'
+        return get_confirmation_link(request, email)
+
     def test_success(self):
         "Token is valid, email address should be confirmed"
         # Create a user
@@ -539,11 +540,21 @@ class TestConfirmEmailAddress(BaseTestCase):
         # Sanity check
         self.assertFalse(user.emails[0].is_confirmed)
 
-        # Attempt to confirm email address
+        # Get valid confirmation link
         email = user.emails[0]
-        url = '/auth/confirm/%s' % email.confirmation_token
-        res = self.app.get(url)
+        confirmation_link = self.makeConfirmationLink(email)
+
+        # Attempt to confirm email address
+        res = self.app.get(confirmation_link)
         self.assertTrue(res.location.endswith('victory_path'))
+
+        # Now configure settings with route that we don't create
+        settings = {'simpleauth.after_email_confirmation_route': 'success_path'}
+        self.config = config_factory(**settings)
+        # Not adding the route!
+        self.app = TestApp(self.config.make_wsgi_app())
+        res = self.app.get(confirmation_link)
+        self.assertEquals(res.location, 'http://localhost/')
 
         # Verify that email address has been confirmed
         Session.add(email)
@@ -558,11 +569,18 @@ class TestConfirmEmailAddress(BaseTestCase):
         # Sanity check
         self.assertFalse(user.emails[0].is_confirmed)
 
-        # Attempt to confirm email address
-        email = user.emails[0]
-        url = '/auth/confirm/%s' % email.confirmation_token + 'INVALID DATA'
+        # Bogus attempts to confirm email address
+        # 1. malformed link
+        url = '/auth/confirm/foo'
         res = self.app.get(url)
         self.assertTrue('invalid' in res.body)
+
+        # 2. invalid token
+        email = user.emails[0]
+        url = self.makeConfirmationLink(email) + 'gibberish'
+        res = self.app.get(url)
+        self.assertTrue('invalid' in res.body)
+
 
         # Verify that email address has been confirmed
         Session.add(email)
