@@ -3,9 +3,5 @@
 <%def name="subtitle()">Confirm email address</%def>
 
 <p>
-% if success:
-    Your email address has been successfully confirmed.
-% else:
-    This confirmation link is invalid.
-% endif
+This confirmation link is invalid.
 </p>

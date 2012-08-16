@@ -467,14 +467,29 @@ def change_password_view(request):
              renderer='pyramid_simpleauth:templates/confirm_email_address.mako')
 def confirm_email_address(request):
     """Confirm email address using a confirmation link"""
-    encoded_id, confirmation_hash = request.matchdict['traverse'][1:]
-    email_id = urlsafe_b64decode(encoded_id.encode('utf-8'))
+    try:
+        encoded_id, confirmation_hash = request.matchdict['traverse'][1:]
+        email_id = urlsafe_b64decode(encoded_id.encode('utf-8'))
+    except ValueError:
+        return {}
     email = model.Email.query.filter_by(id=email_id,
             confirmation_hash=confirmation_hash).first()
     if email:
         email.is_confirmed = True
         model.save(email)
-        success = True
+        user = email.user
+        event = events.EmailAddressConfirmed(request, user, 
+                                             data={'email': email})
+        request.registry.notify(event)
+        route_name = request.registry.settings.get(
+               'simpleauth.after_email_confirmation_route', 'users')
+        view_name = request.registry.settings.get(
+                'simpleauth.after_email_confirmation_view', 'account')
+        try:
+            location = request.route_url(route_name,
+                                         traverse=(user.username, view_name))
+        except (KeyError, ComponentLookupError):
+            location = '/'
+        return HTTPFound(location=location)
     else:
-        success = False 
-    return {'success': success}
+        return {}

@@ -28,6 +28,13 @@ class IUserChangedPassword(Interface):
     request = Attribute('The request object')
     user = Attribute('The user who changes its password.')
 
+class IEmailAddressConfirmed(Interface):
+    """An event type that is emitted whenever a user confirms an email
+    address, typically by clicking on a link received by email."""
+
+    request = Attribute('The request object')
+    user = Attribute('The user who owns the email address.')
+
 
 @implementer(IUserSignedUp)
 class UserSignedUp(object):
@@ -63,6 +70,17 @@ class UserLoggedOut(object):
 class UserChangedPassword(object):
 
     """An instance of this class is emitted whenever a user changes its password."""
+
+    def __init__(self, request, user, data=None):
+        self.request = request
+        self.user = user
+        self.data = data
+
+
+@implementer(IEmailAddressConfirmed)
+class EmailAddressConfirmed(object):
+    """An instance of this class is emitted whenever a user confirms an email
+    address, typically by clicking on a link received by email."""
 
     def __init__(self, request, user, data=None):
         self.request = request

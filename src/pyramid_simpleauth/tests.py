@@ -511,7 +511,18 @@ class TestChangePassword(BaseTestCase):
 
 class TestConfirmEmailAddress(BaseTestCase):
 
+    def setUp(self):
+        """Configure the Pyramid application."""
+        
+        # Override parent setUp to add after confirmation success route
+        settings = {'simpleauth.after_email_confirmation_route': 'success_path'}
+        self.config = config_factory(**settings)
+        self.config.add_route('success_path', 'victory_path')
+        self.app = TestApp(self.config.make_wsgi_app())
+        self.app = TestApp(self.config.make_wsgi_app())
+
     def makeUserWithEmail(self):
+        "Helper method that creates a user with an email"
         from pyramid_simpleauth import model
         user = self.makeUser(u'thruflo', u'password')
         Session.add(user)
@@ -530,11 +541,9 @@ class TestConfirmEmailAddress(BaseTestCase):
 
         # Attempt to confirm email address
         email = user.emails[0]
-        encoded_id = urlsafe_b64encode(str(email.id))
-        hash_part = email.confirmation_hash
-        url = '/auth/confirm/%s/%s' % (encoded_id, hash_part)
+        url = '/auth/confirm/%s' % email.confirmation_token
         res = self.app.get(url)
-        self.assertTrue('success' in res.body)
+        self.assertTrue(res.location.endswith('victory_path'))
 
         # Verify that email address has been confirmed
         Session.add(email)
@@ -551,9 +560,7 @@ class TestConfirmEmailAddress(BaseTestCase):
 
         # Attempt to confirm email address
         email = user.emails[0]
-        encoded_id = urlsafe_b64encode(str(email.id))
-        hash_part = email.confirmation_hash + 'randomstuff'
-        url = '/auth/confirm/%s/%s' % (encoded_id, hash_part)
+        url = '/auth/confirm/%s' % email.confirmation_token + 'INVALID DATA'
         res = self.app.get(url)
         self.assertTrue('invalid' in res.body)
 

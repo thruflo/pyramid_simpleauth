@@ -11,6 +11,7 @@ __all__ = [
 import os
 from binascii import hexlify
 from datetime import datetime
+from base64 import urlsafe_b64encode
 
 from passlib.apps import custom_app_context as pwd_context
 
@@ -191,6 +192,12 @@ class Email(Base, BaseMixin):
     is_confirmed = Column(Boolean, default=False)
     
     user_id = Column(Integer, ForeignKey('auth_users.id'))
+
+    @property
+    def confirmation_token(self):
+        encoded_id = urlsafe_b64encode(str(self.id))
+        return '%s/%s' % (encoded_id, self.confirmation_hash)
+
 
 def get_existing_user(cls=User, **kwargs):
     """Get an existing user from the filter ``kwargs`` provided.
