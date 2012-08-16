@@ -18,6 +18,8 @@ lock down your application and expose views at:
 * /auth/login
 * /auth/authenticate (login via AJAX)
 * /auth/logout
+* /auth/change\_password
+* /auth/confirm (email confirmation)
 
 You get a `user` instance and an `is_authenticated` flag added to the `request`:
 
@@ -25,7 +27,8 @@ You get a `user` instance and an `is_authenticated` flag added to the `request`:
     if request.is_authenticated:
         display = request.user.username
 
-Plus `UserSignedUp`, `UserloggedIn` and `UserLoggedOut` events to subscribe to:
+Plus `UserSignedUp`, `UserloggedIn`, `UserLoggedOut`, `UserChangedPassword` and
+`EmailAddressConfirmed` events to subscribe to:
 
     @subscriber(UserSignedUp)
     def my_event_handler(event):
@@ -37,6 +40,20 @@ Flags at `request.is_post_login` and `request.is_post_signup`, stored in the ses
 that allow you to test whether the current request is immediately after a login or 
 signup event.  And a `request.user_json` property (useful to write into a template 
 to pass data to the client side).
+
+`model.get_confirmation_link(request, email)` returns a `confirmation_link`
+that will be accepted by `/auth/confirm` and that can typically be included in
+an email sent to a user who wish to validate an email address.
+
+The `EmailAddressConfirmed` event provides the `Email` object that has been
+confirmed as `event.data['email']`, eg:
+
+    @subscriber(EmailAddressConfirmed)
+    def email_address_confirmed(event):
+      email_address = event.data['email'].address
+      session = event.request.session
+      session.flash("%s has been confirmed successfully" % email_address)
+
 
 # Install
 
@@ -111,8 +128,13 @@ To redirect to a different named route after signup / login or logout use:
     simpleauth.after_login_route = 'another' # defaults to 'index'
     simpleauth.after_logout_route = 'another' # defaults to 'index'
 
-Note that on login, a `next` parameter passed to the login page will take
-precedence over the specific route.
+To redirect to a different view after email confirmation user:
+
+    simpleauth.after_email_confirmation_route = 'another' # defaults to 'users'
+    simpleauth.after_email_confirmation_view = 'another', # defaults to 'account'
+
+Note that on login, a `next` parameter passed to the login page and password
+change page will take precedence over the specific routes.
 
 By default the app redirects after signup to a route named 'users'.  This is
 not exposed by `pyramid_simpleauth` by default but the package does provide a 
