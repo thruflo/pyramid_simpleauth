@@ -86,3 +86,14 @@ class EmailAddressConfirmed(object):
         self.request = request
         self.user = user
         self.data = data
+
+
+@implementer(IEmailAddressConfirmed)
+class EmailPreferred(object):
+    """An instance of this class is emitted whenever a user prefers an email
+    address, typically by clicking on a button in an account management page."""
+
+    def __init__(self, request, user, data=None):
+        self.request = request
+        self.user = user
+        self.data = data

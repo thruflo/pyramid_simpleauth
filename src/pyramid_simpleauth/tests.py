@@ -6,6 +6,7 @@ import unittest
 from mock import Mock
 
 from pyramid_basemodel import Session
+from pyramid_simpleauth import model
 import transaction
 
 try: # pragma: no cover
@@ -42,7 +43,15 @@ class BaseTestCase(unittest.TestCase):
     def setUp(self):
         """Configure the Pyramid application."""
         
-        self.config = config_factory()
+        # Configure redirect routes
+        view_names = ('change_password', 'change_username', 'confirm_email',
+                      'prefer_email')
+        settings = dict(('simpleauth.after_%s_route' % view_name,
+                         'success_path') for view_name in view_names)
+        self.config = config_factory(**settings)
+        # Add routes for change_password, change_username, confirm_email_address
+        # and preferred_email
+        self.config.add_route('success_path', 'victory_path')
         self.app = TestApp(self.config.make_wsgi_app())
     
     def tearDown(self):
@@ -53,13 +62,30 @@ class BaseTestCase(unittest.TestCase):
     def makeUser(self, username, password):
         """Create and save a user with the credentials provided."""
         
-        from pyramid_simpleauth import model
         user = model.User()
         user.username = username
         user.password = model.encrypt(password)
         model.save(user)
         transaction.commit()
         return user
+
+    def makeUserWithEmail(self):
+        "Helper method that creates a user with an email"
+        user = self.makeUser(u'thruflo', u'password')
+        Session.add(user)
+        user.emails.append(model.Email(address=u'foo@example.com'))
+        transaction.commit()
+        Session.add(user)
+        return user
+
+    def authenticate(self, user):
+        "Authenticate user"
+        post_data = {
+            'username': 'thruflo',
+            'password': 'password'
+        }
+        headers = {'X-Requested-With': 'XMLHttpRequest'}
+        return self.app.post('/auth/authenticate', post_data, headers=headers)
 
 
 class TestSignup(BaseTestCase):
@@ -233,7 +259,7 @@ class TestLogin(BaseTestCase):
         self.config.add_route('index', 'some/path')
         self.app = TestApp(self.config.make_wsgi_app())
         res = self.app.post('/auth/login', post_data, status=302)
-        self.assertTrue(res.headers['Location'] == 'http://localhost/some/path')
+        self.assertEquals(res.location, 'http://localhost/some/path')
         # Or the `simpleauth.after_logout_route` route if specified and exposed.
         settings = {
             'simpleauth.after_login_route': 'flobble'
@@ -417,15 +443,6 @@ class TestLogout(BaseTestCase):
 
 class TestChangePassword(BaseTestCase):
 
-    def authenticate(self, user):
-        "Authenticate user"
-        post_data = {
-            'username': 'thruflo',
-            'password': 'password'
-        }
-        headers = {'X-Requested-With': 'XMLHttpRequest'}
-        return self.app.post('/auth/authenticate', post_data, headers=headers)
-
     def test_wrong_old_password(self):
         "No password change if old password is not corret"
 
@@ -506,25 +523,6 @@ class TestChangePassword(BaseTestCase):
 
 class TestConfirmEmailAddress(BaseTestCase):
 
-    def setUp(self):
-        """Configure the Pyramid application."""
-        
-        # Override parent setUp to add after confirmation success route
-        settings = {'simpleauth.after_email_confirmation_route': 'success_path'}
-        self.config = config_factory(**settings)
-        self.config.add_route('success_path', 'victory_path')
-        self.app = TestApp(self.config.make_wsgi_app())
-
-    def makeUserWithEmail(self):
-        "Helper method that creates a user with an email"
-        from pyramid_simpleauth import model
-        user = self.makeUser(u'thruflo', u'password')
-        Session.add(user)
-        user.emails.append(model.Email(address=u'foo@example.com'))
-        transaction.commit()
-        Session.add(user)
-        return user
-
     def makeConfirmationLink(self, email):
         "Helper method that makes a valid confirmation link"
         from pyramid_simpleauth.model import get_confirmation_link
@@ -548,8 +546,8 @@ class TestConfirmEmailAddress(BaseTestCase):
         res = self.app.get(confirmation_link)
         self.assertTrue(res.location.endswith('victory_path'))
 
-        # Now configure settings with route that we don't create
-        settings = {'simpleauth.after_email_confirmation_route': 'success_path'}
+        # Now configure settings with a route that doesn't exist
+        settings = {'simpleauth.after_confirm_email_route': 'success_path'}
         self.config = config_factory(**settings)
         # Not adding the route!
         self.app = TestApp(self.config.make_wsgi_app())
@@ -586,3 +584,48 @@ class TestConfirmEmailAddress(BaseTestCase):
         Session.add(email)
         Session.refresh(email)
         self.assertFalse(email.is_confirmed)
+
+
+class TestPreferEmail(BaseTestCase):
+
+    def test_success(self):
+        # Create user with email address
+        user = self.makeUserWithEmail()
+        # Add another one
+        user.emails.append(model.Email(address=u'bar@example.com',
+                           is_preferred=True))
+        model.save(user)
+        transaction.commit()
+        Session.add(user)
+
+        email1, email2 = user.emails
+
+        # Sanity check
+        self.assertNotEquals(user.preferred_email, email1)
+        self.assertEquals(user.preferred_email, email2)
+
+        # Attempt to make the address primary
+        self.authenticate(user)
+        self.app.post('/auth/prefer_email', {
+            'email_address': email1.address
+        })
+
+        # Verify that email is not the user's preferred email
+        Session.add(email1)
+        Session.refresh(email1)
+        self.assertEquals(user.preferred_email, email1)
+        self.assertNotEquals(user.preferred_email, email2)
+
+    def test_failure(self):
+        # Create user with email address
+        user = self.makeUserWithEmail()
+        email = user.emails[0]
+
+        # Attempt to make the address primary
+        self.authenticate(user)
+        self.app.post('/auth/prefer_email', {
+            'email_address': email.address + 'not an email address'
+        })
+
+        # Email address should not be prefered
+        self.assertNotEquals(user.preferred_email, email)

@@ -177,6 +177,17 @@ class User(Base, BaseMixin):
         """
         
         return {'username': self.username}
+
+    @property
+    def preferred_email(self):
+        return Email.query.filter_by(user=self, is_preferred=True).first()
+
+    @preferred_email.setter
+    def preferred_email(self, email):
+        for e in self.emails:
+            if e is not email:
+                e.is_preferred = False
+        email.is_preferred = True
     
 
 class Email(Base, BaseMixin):
@@ -190,6 +201,7 @@ class Email(Base, BaseMixin):
     
     confirmation_hash = Column(Unicode(28), default=generate_confirmation_hash)
     is_confirmed = Column(Boolean, default=False)
+    is_preferred = Column(Boolean, default=False)
     
     user_id = Column(Integer, ForeignKey('auth_users.id'))
 

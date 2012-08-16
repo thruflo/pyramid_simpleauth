@@ -3,6 +3,7 @@
 """Provides authentication and authorisation views."""
 
 from base64 import urlsafe_b64decode
+import inspect
 
 from zope.interface.registry import ComponentLookupError
 
@@ -23,9 +24,39 @@ def validate_next_param(request):
     next_ = request.params.get('next', request.POST.get('next'))
     try:
         next_ = schema.RequestPath.to_python(next_)
-    except schema.Invalid as err:
+    except schema.Invalid:
         next_ = None
     return next_
+
+
+def get_redirect_location(request, user=None, route_name='users',
+                          view_name='account'):
+    """Try to calculate redirect location based on the 'next' parameter of
+    `request`. If there's no 'next' parameter, try to get a route from
+    configuration, otherwise redirect to '/'."""
+    # Next param is highest priority
+    next_ = validate_next_param(request)
+    if next_:
+        location = next_
+    else:
+        # Now try configured route
+        caller_name = inspect.stack()[1][3]
+        redirect_route_name = request.registry.settings.get(
+               'simpleauth.after_%s_route' % caller_name, route_name)
+        if user is None:
+            user = request.user
+        traversal_path = [user.username]
+        if view_name:
+            redirect_view_name = request.registry.settings.get(
+                    'simpleauth.after_%s_view' % caller_name, view_name)
+            traversal_path.append(redirect_view_name)
+        try:
+            location = request.route_url(redirect_route_name,
+                                         traverse=traversal_path)
+        except (KeyError, ComponentLookupError):
+            # Fallback to the homepage
+            location = '/'
+    return location
 
 
 @view_config(context=HTTPForbidden, permission=PUBLIC)
@@ -266,7 +297,7 @@ def authenticate_view(request):
 
 @view_config(context=tree.AuthRoot, name='login', permission=PUBLIC,
         renderer='pyramid_simpleauth:templates/login.mako', xhr=False)
-def login_view(request):
+def login(request):
     """Render login form.  If posted a ``username`` and ``password``, attempt to
       authenticate the user using the credentials provided.  If authentication
       if successful, redirect the user whence they came.
@@ -284,7 +315,7 @@ def login_view(request):
 
           >>> dummy_request = DummyRequest()
           >>> dummy_request.registry.settings = {}
-          >>> return_value = login_view(dummy_request)
+          >>> return_value = login(dummy_request)
           >>> return_value['renderer'].data
           {'failed': False}
 
@@ -292,7 +323,7 @@ def login_view(request):
 
           >>> dummy_request = DummyRequest(post={'foo': 'bar'})
           >>> dummy_request.registry.settings = {}
-          >>> return_value = login_view(dummy_request)
+          >>> return_value = login(dummy_request)
           >>> return_value['renderer'].data['failed']
           True
 
@@ -305,7 +336,7 @@ def login_view(request):
           ... }
           >>> dummy_request = DummyRequest(post=valid_post)
           >>> dummy_request.registry.settings = {}
-          >>> return_value = login_view(dummy_request)
+          >>> return_value = login(dummy_request)
           >>> model.authenticate.assert_called_with('thruflo', 'password')
 
       If they don't match::
@@ -320,7 +351,7 @@ def login_view(request):
           >>> model.authenticate.return_value = mock_user
           >>> dummy_request = DummyRequest(post=valid_post)
           >>> dummy_request.registry.settings = {}
-          >>> return_value = login_view(dummy_request)
+          >>> return_value = login(dummy_request)
           >>> isinstance(return_value, HTTPFound)
           True
           >>> return_value.location
@@ -335,7 +366,7 @@ def login_view(request):
           ... }
           >>> dummy_request = DummyRequest(post=data)
           >>> dummy_request.registry.settings = {}
-          >>> return_value = login_view(dummy_request)
+          >>> return_value = login(dummy_request)
           >>> return_value.location
           '/foo/bar'
 
@@ -343,7 +374,7 @@ def login_view(request):
 
           >>> data['next'] = '$do.evil(h4x);'
           >>> dummy_request = DummyRequest(post=data)
-          >>> return_value = login_view(dummy_request)
+          >>> return_value = login(dummy_request)
           >>> return_value.location
           '/'
 
@@ -364,15 +395,8 @@ def login_view(request):
                 # Remember the logged in user.
                 headers = remember(request, user.canonical_id)
                 # Work out where to redirect to next.
-                if next_:
-                    location = next_
-                else:  # Get the default url to redirect to.
-                    settings = request.registry.settings
-                    route_name = settings.get('simpleauth.after_login_route', 'index')
-                    try:
-                        location = request.route_url(route_name, traverse=(user.username,))
-                    except (KeyError, ComponentLookupError):
-                        location = '/'
+                location = get_redirect_location(request, user,
+                        route_name='index', view_name=None)
                 # Fire a ``UserLoggedIn`` event.
                 request.registry.notify(events.UserLoggedIn(request, user))
                 # Redirect.
@@ -434,14 +458,15 @@ def logout_view(request):
     return HTTPFound(location=location, headers=headers)
 
 
+
 @view_config(context=tree.AuthRoot, name='change_password',
              permission='change_password',
              renderer='pyramid_simpleauth:templates/change_password.mako')
-def change_password_view(request):
+def change_password(request):
     """Change user password."""
-    next_ = validate_next_param(request)
     form = Form(request, schema=schema.ChangePassword, defaults={'failed': False})
     user = request.user
+    location = get_redirect_location(request)
     if request.method == 'POST':
         if form.validate():
             d = form.data
@@ -452,20 +477,18 @@ def change_password_view(request):
                 model.save(user)
                 request.registry.notify(events.UserChangedPassword(request, user))
                 form.data['failed'] = False
-                location = next_ or '/'
                 return HTTPFound(location=location)
             else:
                 form.errors['old_password'] = 'Wrong current password.'
                 form.data['failed'] = True
 
-    if next_:
-        form.data['next'] = next_
+    form.data['next'] = location
     return {'renderer': FormRenderer(form), 'user': user}
 
 
 @view_config(context=tree.AuthRoot, name="confirm", permission=PUBLIC,
              renderer='pyramid_simpleauth:templates/confirm_email_address.mako')
-def confirm_email_address(request):
+def confirm_email(request):
     """Confirm email address using a confirmation link"""
     try:
         encoded_id, confirmation_hash = request.matchdict['traverse'][1:]
@@ -481,15 +504,28 @@ def confirm_email_address(request):
         event = events.EmailAddressConfirmed(request, user, 
                                              data={'email': email})
         request.registry.notify(event)
-        route_name = request.registry.settings.get(
-               'simpleauth.after_email_confirmation_route', 'users')
-        view_name = request.registry.settings.get(
-                'simpleauth.after_email_confirmation_view', 'account')
-        try:
-            location = request.route_url(route_name,
-                                         traverse=(user.username, view_name))
-        except (KeyError, ComponentLookupError):
-            location = '/'
+        location = get_redirect_location(request, user)
         return HTTPFound(location=location)
     else:
         return {}
+
+
+@view_config(context=tree.AuthRoot, name="prefer_email",
+             permission="prefer_email")
+def prefer_email(request):
+    user = request.user
+    validator = schema.Email()
+    try:
+        email_address = validator.to_python(request.POST.get('email_address'))
+        email = model.get_existing_email(email_address)
+        if email:
+            user.preferred_email = email
+            model.save(user)
+            event = events.EmailPreferred(request, user, data={'email': email})
+            request.registry.notify(event)
+        else:
+            pass
+    except schema.Invalid:
+        pass 
+    location = get_redirect_location(request)
+    return HTTPFound(location=location)

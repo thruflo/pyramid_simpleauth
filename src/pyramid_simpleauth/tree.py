@@ -27,6 +27,7 @@ class AuthRoot(object):
     __acl__ = [
         (Allow, Everyone, 'logout'),
         (Allow, Authenticated, 'change_password'),
+        (Allow, Authenticated, 'prefer_email'),
     ]
     
     def __init__(self, request):
