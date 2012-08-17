@@ -300,3 +300,8 @@ class ChangePassword(FlexibleSchema):
             'new_confirm'
         )
     ]
+
+
+class ChangeUsername(FlexibleSchema):
+    """Form field to render and validate for username change."""
+    username = UniqueUsername(not_empty=True)

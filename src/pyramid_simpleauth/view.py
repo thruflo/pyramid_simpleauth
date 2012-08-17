@@ -40,22 +40,31 @@ def get_redirect_location(request, user=None, route_name='users',
         location = next_
     else:
         # Now try configured route
-        caller_name = inspect.stack()[1][3]
+        caller_name = inspect.stack()[1][3] # Get caller view function name
+
+        # Get redirect route name
         redirect_route_name = request.registry.settings.get(
                'simpleauth.after_%s_route' % caller_name, route_name)
         if user is None:
             user = request.user
+
+        # Username is first part of traversal path
         traversal_path = [user.username]
+
+        # Add view name as second part of traversal path if necessary
         if view_name:
             redirect_view_name = request.registry.settings.get(
                     'simpleauth.after_%s_view' % caller_name, view_name)
             traversal_path.append(redirect_view_name)
+
         try:
+            # Resolve route
             location = request.route_url(redirect_route_name,
                                          traverse=traversal_path)
         except (KeyError, ComponentLookupError):
             # Fallback to the homepage
             location = '/'
+
     return location
 
 
@@ -457,6 +466,26 @@ def logout_view(request):
     # Redirect.
     return HTTPFound(location=location, headers=headers)
 
+
+@view_config(context=tree.AuthRoot, name='change_username',
+        permission='change_username',
+        renderer='pyramid_simpleauth:templates/change_username.mako')
+def change_username(request):
+    "Change username"
+    form = Form(request, schema=schema.ChangeUsername)
+    user = request.user
+    if request.method == 'POST':
+        if form.validate():
+            user.username = form.data['username']
+            model.save(user)
+            request.registry.notify(events.UserChangedUsername(request, user))
+            # Get location based on new username
+            location = get_redirect_location(request)
+            return HTTPFound(location=location)
+    # Get location based on unchanged username
+    location = get_redirect_location(request)
+    form.data['next'] = location
+    return {'renderer': FormRenderer(form), 'user': user}
 
 
 @view_config(context=tree.AuthRoot, name='change_password',

@@ -521,6 +521,52 @@ class TestChangePassword(BaseTestCase):
         self.assertEquals(res.headers['Location'], 'http://localhost/foo/bar')
 
 
+class TestChangeUsername(BaseTestCase):
+
+    def test_success(self):
+        "Change username with valid input"
+        # Create a user.
+        user = self.makeUser(u'thruflo', u'password')
+
+        # Attempt to change username
+        post_data = {
+            'username': u'bob',
+            'next':     '/foo/bar',
+        }
+        self.authenticate(user)
+        res = self.app.post('/auth/change_username', post_data)
+
+        # Verify redirect
+        self.assertEquals(res.location, 'http://localhost/foo/bar')
+
+        # Verify that username has changed
+        Session.add(user)
+        self.assertEquals(user.username, 'bob')
+
+    def test_failure(self):
+        "Change username with invalid input"
+        # Create a user.
+        user = self.makeUser(u'thruflo', u'password')
+
+        # Attempt to assign bogus username
+        post_data = {
+            'username': u'$ @ 88 , /',
+            'next':     '/foo/bar',
+        }
+        self.authenticate(user)
+        res = self.app.post('/auth/change_username', post_data)
+
+        # Verify response body
+        self.assertTrue('No spaces or funny characters' in res.body)
+        self.assertTrue('/foo/bar' in res.body,
+                        "Response body should contain next hidden field")
+
+        # Verify that username has not changed
+        Session.add(user)
+        self.assertEquals(user.username, 'thruflo')
+
+
+
 class TestConfirmEmailAddress(BaseTestCase):
 
     def makeConfirmationLink(self, email):
@@ -589,6 +635,7 @@ class TestConfirmEmailAddress(BaseTestCase):
 class TestPreferEmail(BaseTestCase):
 
     def test_success(self):
+        "Set preferred email address"
         # Create user with email address
         user = self.makeUserWithEmail()
         # Add another one
@@ -617,6 +664,7 @@ class TestPreferEmail(BaseTestCase):
         self.assertNotEquals(user.preferred_email, email2)
 
     def test_failure(self):
+        "Attempt to set preferred email address with invalid input"
         # Create user with email address
         user = self.makeUserWithEmail()
         email = user.emails[0]
