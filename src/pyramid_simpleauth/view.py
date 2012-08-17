@@ -505,11 +505,9 @@ def change_password(request):
                 user.password = model.encrypt(d['new_password'])
                 model.save(user)
                 request.registry.notify(events.UserChangedPassword(request, user))
-                form.data['failed'] = False
                 return HTTPFound(location=location)
             else:
                 form.errors['old_password'] = 'Wrong current password.'
-                form.data['failed'] = True
 
     form.data['next'] = location
     return {'renderer': FormRenderer(form), 'user': request.user}
