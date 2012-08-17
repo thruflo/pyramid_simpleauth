@@ -469,6 +469,28 @@ class TestChangePassword(BaseTestCase):
         self.assertTrue("/foo/bar" in res.body)
         self.assertEquals(user.password, old_hash)
 
+    def test_wrong_old_password_returns_valid_user(self):
+        "Bug fix: user template param must not be None"
+        from pyramid_simpleauth.view import change_password
+        from pyramid import testing
+
+        # Create a user.
+        user = self.makeUser('thruflo', 'password')
+        Session.add(user)
+
+        post_data = {
+            'old_password': 'foobarbaz',
+            'new_password': 'swordpas',
+            'new_confirm':  'swordpas',
+        }
+        request = testing.DummyRequest(post=post_data)
+        request.user = user
+        testing.setUp(settings={})
+        res = change_password(request)
+
+        self.assertTrue(res['user'])
+
+
     def test_new_passwords_dont_match(self):
         "No password change if new passwords don't match"
 
@@ -564,7 +586,6 @@ class TestChangeUsername(BaseTestCase):
         # Verify that username has not changed
         Session.add(user)
         self.assertEquals(user.username, 'thruflo')
-
 
 
 class TestConfirmEmailAddress(BaseTestCase):

@@ -512,7 +512,7 @@ def change_password(request):
                 form.data['failed'] = True
 
     form.data['next'] = location
-    return {'renderer': FormRenderer(form), 'user': user}
+    return {'renderer': FormRenderer(form), 'user': request.user}
 
 
 @view_config(context=tree.AuthRoot, name="confirm", permission=PUBLIC,
