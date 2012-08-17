@@ -18,8 +18,10 @@ lock down your application and expose views at:
 * /auth/login
 * /auth/authenticate (login via AJAX)
 * /auth/logout
+* /auth/change\_username
 * /auth/change\_password
 * /auth/confirm (email confirmation)
+* /auth/prefer\_email (set email as the user's preferred email)
 
 You get a `user` instance and an `is_authenticated` flag added to the `request`:
 
@@ -27,8 +29,9 @@ You get a `user` instance and an `is_authenticated` flag added to the `request`:
     if request.is_authenticated:
         display = request.user.username
 
-Plus `UserSignedUp`, `UserloggedIn`, `UserLoggedOut`, `UserChangedPassword` and
-`EmailAddressConfirmed` events to subscribe to:
+Plus `UserSignedUp`, `UserloggedIn`, `UserLoggedOut`, `UserChangedPassword`,
+`UserChangedUsername`, `EmailPreferred` and `EmailAddressConfirmed` events to
+subscribe to:
 
     @subscriber(UserSignedUp)
     def my_event_handler(event):
@@ -45,8 +48,8 @@ to pass data to the client side).
 that will be accepted by `/auth/confirm` and that can typically be included in
 an email sent to a user who wish to validate an email address.
 
-The `EmailAddressConfirmed` event provides the `Email` object that has been
-confirmed as `event.data['email']`, eg:
+The `EmailAddressConfirmed` and `EmailPreferred` events give you access to the
+`Email` object as `event.data['email']`, eg:
 
     @subscriber(EmailAddressConfirmed)
     def email_address_confirmed(event):
@@ -116,11 +119,12 @@ To change the url path for the authentication views, specify a
     # defaults to 'auth', resulting in urls that start with `/auth/...`
     simpleauth.url_prefix = 'another'
 
-You can also specify where to redirect to after signup, login and logout. These
-are all configured using *route names*, with the route being provided the 
-additional traversal information of the user's username.  (This means you can 
-expose a simple named route, or a hybrid route, as you prefer.  The hybrid route
-will attempt traversal on the username).
+You can also specify where to redirect to after signup, login, logout, username
+change, password change, email confirmation or preferred email selection. These
+are all configured using *route names*, with the route being provided the
+additional traversal information of the user's username and an optional view
+name.  (This means you can expose a simple named route, or a hybrid route, as
+you prefer.  The hybrid route will attempt traversal on the username).
 
 To redirect to a different named route after signup / login or logout use:
 
@@ -128,13 +132,30 @@ To redirect to a different named route after signup / login or logout use:
     simpleauth.after_login_route = 'another' # defaults to 'index'
     simpleauth.after_logout_route = 'another' # defaults to 'index'
 
-To redirect to a different view after email confirmation user:
+Note that a `next` parameter passed to the login page, password
+change page, username change page, email confirmation page or preferred email
+selection page will take precedence over the specific routes.
 
-    simpleauth.after_email_confirmation_route = 'another' # defaults to 'users'
-    simpleauth.after_email_confirmation_view = 'another', # defaults to 'account'
+To redirect to a different route and view after login, password change, username
+change, email confirmation or preferred email selection, use configuration
+directives such as:
 
-Note that on login, a `next` parameter passed to the login page and password
-change page will take precedence over the specific routes.
+    simpleauth.after_confirm_email_route = 'basepath' # defaults to 'users'
+    simpleauth.after_confirm_email_view = 'viewname', # defaults to 'account'
+
+This would redirect user bob to `/basepath/bob/viewname`. Redirect configuration
+directives for each of those views are named following the patterns
+`simpleauth.after_<view_name>_route` and `simpleauth.after_<view_name>_view`,
+where `<view_name>` can be any of `login`, `change_username`,
+`change_password`, `confirm_email` and `prefer_email`.
+
+Be careful in the case of username change because if your `next` URL contains a
+username, it won't be valid anymore after the username has changed, eg. if you
+instruct the username change page to redirect to `/basepath/bob/viewname` but
+the username changes to become alice, the redirect will cause a "page not found"
+error. In this case, if you want to include a username in your custom redirect,
+you should use the configuration-based redirect location will take into account
+the new username.
 
 By default the app redirects after signup to a route named 'users'.  This is
 not exposed by `pyramid_simpleauth` by default but the package does provide a 
