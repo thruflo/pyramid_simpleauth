@@ -188,6 +188,8 @@ class User(Base, BaseMixin):
             if e is not email:
                 e.is_preferred = False
         email.is_preferred = True
+        if not email in self.emails:
+            self.emails.append(email)
     
 
 class Email(Base, BaseMixin):

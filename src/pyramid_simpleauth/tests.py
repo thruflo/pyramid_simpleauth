@@ -67,6 +67,7 @@ class BaseTestCase(unittest.TestCase):
         user.password = model.encrypt(password)
         model.save(user)
         transaction.commit()
+        Session.add(user)
         return user
 
     def makeUserWithEmail(self):
@@ -698,3 +699,18 @@ class TestPreferEmail(BaseTestCase):
 
         # Email address should not be prefered
         self.assertNotEquals(user.preferred_email, email)
+
+    def test_prefer_non_persisted_email(self):
+        "Set non-persisted email object as new preferred email"
+        # Create user without any email address
+        user = self.makeUser('bob', '123')
+
+        # Directly set new email as preferred email
+        email = model.Email(address=u'bar@example.com')
+        user.preferred_email = email
+        model.save(user)
+        transaction.commit()
+
+        # Verify that the new email is now the preferred email
+        Session.add(user)
+        self.assertEquals(user.preferred_email.address, u'bar@example.com')
