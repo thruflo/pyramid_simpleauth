@@ -180,7 +180,8 @@ class User(Base, BaseMixin):
 
     @property
     def preferred_email(self):
-        return Email.query.filter_by(user=self, is_preferred=True).first()
+        return (Email.query.filter_by(user=self, is_preferred=True).first()
+                or Email.query.filter_by(user=self).first())
 
     @preferred_email.setter
     def preferred_email(self, email):

@@ -714,3 +714,18 @@ class TestPreferEmail(BaseTestCase):
         # Verify that the new email is now the preferred email
         Session.add(user)
         self.assertEquals(user.preferred_email.address, u'bar@example.com')
+
+    def test_preferred_if_only_one(self):
+        "If user has only one email, consider it as preferred email"
+        # Create user without any email address
+        user = self.makeUser('bob', '123')
+
+        # Directly set new email as preferred email
+        email = model.Email(address=u'bar@example.com')
+        user.emails.append(email)
+        model.save(user)
+        transaction.commit()
+
+        # Verify that the new email is now the preferred email
+        Session.add(user)
+        self.assertEquals(user.preferred_email.address, u'bar@example.com')
