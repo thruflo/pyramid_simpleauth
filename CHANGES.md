@@ -1,4 +1,14 @@
 
+# 0.3
+
+Limit `/auth/logout` to POST requests.
+
+Provide account management features (thanks to @amarandon):
+
+* change password
+* change username
+* manage email accounts
+
 # 0.2.7
 
 Updated form.mako to follow new bootstrap syntax.
