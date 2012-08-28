@@ -417,7 +417,8 @@ def login(request):
     return {'renderer': FormRenderer(form)}
 
 
-@view_config(context=tree.AuthRoot, name='logout', permission='logout')
+@view_config(context=tree.AuthRoot, name='logout', permission='logout',
+        request_method='POST')
 def logout_view(request):
     """Log the user out and redirect.
 
