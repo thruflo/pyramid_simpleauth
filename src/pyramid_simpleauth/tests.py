@@ -375,20 +375,20 @@ class TestLogout(BaseTestCase):
         res = self.app.post('/auth/login', post_data, status=302)
         self.assertTrue(len(res.headers['Set-Cookie']) > 250)
         # Logout.
-        res = self.app.get('/auth/logout', status=302)
+        res = self.app.post('/auth/logout', status=302)
         self.assertTrue(len(res.headers['Set-Cookie']) < 200)
     
     def test_logout_redirects(self):
         """Logout redirects."""
         
         # The response redirects to `/` by default with no routes or settings.
-        res = self.app.get('/auth/logout', status=302)
+        res = self.app.post('/auth/logout', status=302)
         self.assertTrue(res.headers['Location'] == 'http://localhost/')
         # The response redirects to the `index` route if exposed.
         self.config = config_factory()
         self.config.add_route('index', 'some/path')
         self.app = TestApp(self.config.make_wsgi_app())
-        res = self.app.get('/auth/logout', status=302)
+        res = self.app.post('/auth/logout', status=302)
         self.assertTrue(res.headers['Location'] == 'http://localhost/some/path')
         # The response redirects to the `simpleauth.after_logout_route` route
         # if specified.
@@ -398,7 +398,7 @@ class TestLogout(BaseTestCase):
         self.config = config_factory(**settings)
         self.config.add_route('flobble', 'wob')
         self.app = TestApp(self.config.make_wsgi_app())
-        res = self.app.get('/auth/logout', status=302)
+        res = self.app.post('/auth/logout', status=302)
         self.assertTrue(res.headers['Location'] == 'http://localhost/wob')
     
     def test_loggedout_event(self):
@@ -419,7 +419,7 @@ class TestLogout(BaseTestCase):
         }
         res = self.app.post('/auth/login', post_data, status=302)
         # Logout.
-        res = self.app.get('/auth/logout', status=302)
+        res = self.app.post('/auth/logout', status=302)
         # Handler was called with the authentiated user as the second arg.
         self.assertTrue(mock_subscriber.called)
         event = mock_subscriber.call_args_list[0][0][0]
@@ -437,7 +437,7 @@ class TestLogout(BaseTestCase):
         self.config.add_subscriber(mock_subscriber, UserLoggedOut)
         self.app = TestApp(self.config.make_wsgi_app())
         # Logout.
-        res = self.app.get('/auth/logout', status=302)
+        res = self.app.post('/auth/logout', status=302)
         # Handler was not called.
         self.assertFalse(mock_subscriber.called)
     
