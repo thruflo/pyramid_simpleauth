@@ -177,7 +177,26 @@ class User(Base, BaseMixin):
         """
         
         return {'username': self.username}
-
+    
+    
+    @property
+    def confirmed_emails(self, email_cls=None):
+        """Return a list of confirmed emails."""
+        
+        # Test jig.
+        if email_cls is None:
+            email_cls = Email
+        
+        query = email_cls.query.filter_by(user=self, is_confirmed=True)
+        return query.all()
+    
+    @property
+    def has_confirmed_email(self):
+        """Has the user got any confirmed emails?"""
+        
+        return bool(self.confirmed_emails)
+    
+    
     @property
     def preferred_email(self):
         return (Email.query.filter_by(user=self, is_preferred=True).first()
