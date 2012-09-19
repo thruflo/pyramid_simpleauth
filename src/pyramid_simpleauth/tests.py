@@ -6,7 +6,8 @@ import unittest
 from mock import Mock
 
 from pyramid_basemodel import Session
-from pyramid_simpleauth import model
+from pyramid_simpleauth import model, tree
+from pyramid_simpleauth.model import get_existing_user
 import transaction
 
 try: # pragma: no cover
@@ -79,12 +80,13 @@ class BaseTestCase(unittest.TestCase):
         Session.add(user)
         return user
 
-    def authenticate(self, user):
+    def authenticate(self, **post_data):
         "Authenticate user"
-        post_data = {
-            'username': 'thruflo',
-            'password': 'password'
-        }
+        if not post_data:
+            post_data = {
+                'username': 'thruflo',
+                'password': 'password'
+            }
         headers = {'X-Requested-With': 'XMLHttpRequest'}
         return self.app.post('/auth/authenticate', post_data, headers=headers)
 
@@ -100,7 +102,6 @@ class TestSignup(BaseTestCase):
     def test_signup(self):
         """Signup saves a user and their email address."""
         
-        from pyramid_simpleauth.model import get_existing_user
         # Sanity check there isn't an existing user.
         existing = get_existing_user(username='thruflo')
         self.assertTrue(existing is None)
@@ -452,7 +453,7 @@ class TestChangePassword(BaseTestCase):
         Session.add(user)
         old_hash = user.password
 
-        self.authenticate(user)
+        self.authenticate()
 
         # Attempt to change password.
         post_data = {
@@ -500,7 +501,7 @@ class TestChangePassword(BaseTestCase):
         Session.add(user)
         old_hash = user.password
 
-        self.authenticate(user)
+        self.authenticate()
 
         # Attempt to change password.
         post_data = {
@@ -524,7 +525,7 @@ class TestChangePassword(BaseTestCase):
         Session.add(user)
         old_hash = user.password
 
-        self.authenticate(user)
+        self.authenticate()
 
         # Attempt to change password.
         post_data = {
@@ -556,7 +557,7 @@ class TestChangeUsername(BaseTestCase):
             'username': u'bob',
             'next':     '/foo/bar',
         }
-        self.authenticate(user)
+        self.authenticate()
         res = self.app.post('/auth/change_username', post_data)
 
         # Verify redirect
@@ -576,7 +577,7 @@ class TestChangeUsername(BaseTestCase):
             'username': u'$ @ 88 , /',
             'next':     '/foo/bar',
         }
-        self.authenticate(user)
+        self.authenticate()
         res = self.app.post('/auth/change_username', post_data)
 
         # Verify response body
@@ -674,7 +675,7 @@ class TestPreferEmail(BaseTestCase):
         self.assertEquals(user.preferred_email, email2)
 
         # Attempt to make the address primary
-        self.authenticate(user)
+        self.authenticate()
         self.app.post('/auth/prefer_email', {
             'email_address': email1.address
         })
@@ -692,7 +693,7 @@ class TestPreferEmail(BaseTestCase):
         email = user.emails[0]
 
         # Attempt to make the address primary
-        self.authenticate(user)
+        self.authenticate()
         self.app.post('/auth/prefer_email', {
             'email_address': email.address + 'not an email address'
         })
@@ -729,3 +730,83 @@ class TestPreferEmail(BaseTestCase):
         # Verify that the new email is now the preferred email
         Session.add(user)
         self.assertEquals(user.preferred_email.address, u'bar@example.com')
+
+
+class TestDeleteUser(BaseTestCase):
+
+    def add_user_root(self):
+        "Configure app with /users/<username> route"
+        self.config = config_factory()
+        self.config.add_route('users', 'users/*traverse', factory=tree.UserRoot,
+                              use_global_views=True)
+        self.app = TestApp(self.config.make_wsgi_app())
+
+    def test_success(self):
+        "User can delete itself"
+        self.add_user_root()
+
+        user = self.makeUser('thruflo', 'password')
+        Session.add(user)
+
+        self.authenticate()
+
+        # Attempt to delete user
+        res = self.app.get('/users/thruflo/delete_user')
+
+        # Verify confirmation message
+        self.assertTrue('Are you really sure' in res.body)
+
+        # Verify that the user has not yet been deleted
+        self.assertIsNotNone(get_existing_user(username='thruflo'))
+
+        # Delete the user
+        res = self.app.post('/users/thruflo/delete_user')
+
+        # Verify that the user has now been deleted
+        self.assertIsNone(get_existing_user(username='thruflo'))
+
+        # User should be logged out
+        self.assertTrue(len(res.headers['Set-Cookie']) < 200)
+
+    def test_other_user(self):
+        "Non-admin user cannot delete ohter user"
+        self.add_user_root()
+
+        # User to delete
+        self.makeUser('alice', 'password')
+
+        # Login as other user
+        bob = self.makeUser('bob', 'password')
+        model.save(bob)
+        transaction.commit()
+        self.authenticate(username='bob', password='password')
+
+        # Try to delete user
+        res = self.app.post('/users/alice/delete_user', status=403)
+
+        # Verify that the user has not been deleted
+        self.assertIsNotNone(get_existing_user(username='alice'))
+        # User should still be logged in
+        self.assertGreater(len(res.headers['Set-Cookie']), 250)
+
+    def test_admin(self):
+        "Admin should be allowed to delete any user"
+        self.add_user_root()
+
+        # User to delete
+        self.makeUser('alice', 'password')
+
+        # Login as admin
+        admin = self.makeUser('admin', 'password')
+        admin.roles.append(model.Role(name='admin'))
+        model.save(admin)
+        transaction.commit()
+        self.authenticate(username='admin', password='password')
+
+        # Delete user
+        res = self.app.post('/users/alice/delete_user')
+
+        # Verify that user has been successfully deleted
+        self.assertIsNone(get_existing_user(username='alice'))
+        # Admin should still be logged in
+        self.assertGreater(len(res.headers['Set-Cookie']), 250)
