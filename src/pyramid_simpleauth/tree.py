@@ -29,6 +29,7 @@ class AuthRoot(object):
         (Allow, Authenticated, 'change_password'),
         (Allow, Authenticated, 'change_username'),
         (Allow, Authenticated, 'prefer_email'),
+        (Allow, Authenticated, 'delete_user'),
     ]
     
     def __init__(self, request):

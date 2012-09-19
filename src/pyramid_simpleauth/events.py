@@ -41,6 +41,13 @@ class IEmailAddressConfirmed(Interface):
     request = Attribute('The request object')
     user = Attribute('The user who owns the email address.')
 
+class IUserDeleted(Interface):
+    """An event type that is emitted whenever a user confirms an email
+    address, typically by clicking on a link received by email."""
+
+    request = Attribute('The request object')
+    user = Attribute('The user who owns the email address.')
+
 
 @implementer(IUserSignedUp)
 class UserSignedUp(object):
@@ -114,3 +121,12 @@ class EmailPreferred(object):
         self.user = user
         self.data = data
 
+
+@implementer(IUserDeleted)
+class UserDeleted(object):
+    """An instance of this class is emitted whenever a user prefers an email
+    address, typically by clicking on a button in an account management page."""
+
+    def __init__(self, request, username, data=None):
+        self.request = request
+        self.username = username
