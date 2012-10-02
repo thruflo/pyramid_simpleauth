@@ -83,12 +83,14 @@ def includeme(config):
     config.add_route('simpleauth', path, factory=AuthRoot, use_global_views=True)
     
     # Lock down everything by default.
-    if not settings.get('simpleauth.set_default_permission') is False:
+    if settings.get('simpleauth.set_default_permission', '').lower() not in [
+            'false', 'f', '0', 'no', 'n']:
         permission = settings.get('simpleauth.default_permission', 'view')
         config.set_default_permission(permission)
     
     # Setup authentication and authorisation policies.
-    if not settings.get('simpleauth.set_auth_policies') is False:
+    if settings.get('simpleauth.set_auth_policies', '').lower() not in [
+            'false', 'f', '0', 'no', 'n']:
         authn_policy = SessionAuthenticationPolicy(callback=get_roles)
         authz_policy = ACLAuthorizationPolicy()
         config.set_authorization_policy(authz_policy)
