@@ -107,6 +107,4 @@ def includeme(config):
         config.set_authentication_policy(authn_policy)
 
     # Run a venusian scan to pick up the declarative configuration.
-    config.scan('pyramid_simpleauth.events')
-    config.scan('pyramid_simpleauth.hooks')
-    config.scan('pyramid_simpleauth.view')
+    config.scan('pyramid_simpleauth', ignore='pyramid_simpleauth.tests')
