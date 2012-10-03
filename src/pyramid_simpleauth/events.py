@@ -4,11 +4,13 @@
 
 from zope.interface import implementer, Attribute, Interface
 
+
 class IUserSignedUp(Interface):
     """An event type that is emitted after a new user signs up."""
 
     request = Attribute('The request object.')
     user = Attribute('The user who signed up.')
+
 
 class IUserLoggedIn(Interface):
     """An event type that is emitted after a user logs in."""
@@ -16,11 +18,13 @@ class IUserLoggedIn(Interface):
     request = Attribute('The request object.')
     user = Attribute('The user who logged in.')
 
+
 class IUserLoggedOut(Interface):
     """An event type that is emitted after a user logs out."""
 
     request = Attribute('The request object')
     user = Attribute('The user who logged out.')
+
 
 class IUserChangedPassword(Interface):
     """An event type that is emitted after a user changes its password."""
@@ -28,11 +32,13 @@ class IUserChangedPassword(Interface):
     request = Attribute('The request object')
     user = Attribute('The user who changes its password.')
 
+
 class IUserChangedUsername(Interface):
     """An event type that is emitted after a user changes its username."""
 
     request = Attribute('The request object')
     user = Attribute('The user who changes its username.')
+
 
 class IEmailAddressConfirmed(Interface):
     """An event type that is emitted whenever a user confirms an email
@@ -40,6 +46,7 @@ class IEmailAddressConfirmed(Interface):
 
     request = Attribute('The request object')
     user = Attribute('The user who owns the email address.')
+
 
 class IUserDeleted(Interface):
     """An event type that is emitted whenever a user confirms an email
@@ -81,8 +88,9 @@ class UserLoggedOut(object):
 
 @implementer(IUserChangedPassword)
 class UserChangedPassword(object):
-
-    """An instance of this class is emitted whenever a user changes its password."""
+    """An instance of this class is emitted whenever a user changes its
+       password.
+    """
 
     def __init__(self, request, user, data=None):
         self.request = request
@@ -92,7 +100,9 @@ class UserChangedPassword(object):
 
 @implementer(IUserChangedUsername)
 class UserChangedUsername(object):
-    """An instance of this class is emitted whenever a user change its username."""
+    """An instance of this class is emitted whenever a user change its
+       username.
+    """
 
     def __init__(self, request, user, data=None):
         self.request = request
@@ -114,7 +124,9 @@ class EmailAddressConfirmed(object):
 @implementer(IEmailAddressConfirmed)
 class EmailPreferred(object):
     """An instance of this class is emitted whenever a user prefers an email
-    address, typically by clicking on a button in an account management page."""
+       address, typically by clicking on a button in an account management
+       page.
+    """
 
     def __init__(self, request, user, data=None):
         self.request = request
@@ -125,7 +137,9 @@ class EmailPreferred(object):
 @implementer(IUserDeleted)
 class UserDeleted(object):
     """An instance of this class is emitted whenever a user prefers an email
-    address, typically by clicking on a button in an account management page."""
+       address, typically by clicking on a button in an account management
+       page.
+    """
 
     def __init__(self, request, username, data=None):
         self.request = request

@@ -40,7 +40,7 @@ def get_redirect_location(request, user=None, route_name='users',
         location = next_
     else:
         # Now try configured route
-        caller_name = inspect.stack()[1][3] # Get caller view function name
+        caller_name = inspect.stack()[1][3]  # Get caller view function name
 
         # Get redirect route name
         redirect_route_name = request.registry.settings.get(
@@ -167,7 +167,8 @@ def signup_view(request):
           {'failed': True, 'foo': 'bar'}
 
       If provided with valid data, it saves a ``User`` with related ``Email``,
-      logs them in by calling ``remember`` and redirects to the user's profile::
+      logs them in by calling ``remember`` and redirects to the user's
+      profile::
 
           >>> valid_post = {
           ...     'username': 'thruflo',
@@ -221,7 +222,8 @@ def signup_view(request):
             settings = request.registry.settings
             route_name = settings.get('simpleauth.after_signup_route', 'users')
             try:
-                location = request.route_url(route_name, traverse=(user.username,))
+                location = request.route_url(route_name,
+                                             traverse=(user.username,))
             except (KeyError, ComponentLookupError):
                 location = '/'
             return HTTPFound(location=location)
@@ -307,9 +309,9 @@ def authenticate_view(request):
 @view_config(context=tree.AuthRoot, name='login', permission=PUBLIC,
         renderer='pyramid_simpleauth:templates/login.mako', xhr=False)
 def login(request):
-    """Render login form.  If posted a ``username`` and ``password``, attempt to
-      authenticate the user using the credentials provided.  If authentication
-      if successful, redirect the user whence they came.
+    """Render login form.  If posted a ``username`` and ``password``, attempt
+      to authenticate the user using the credentials provided.  If
+      authentication if successful, redirect the user whence they came.
 
       Setup::
 
@@ -494,7 +496,8 @@ def change_username(request):
              renderer='pyramid_simpleauth:templates/change_password.mako')
 def change_password(request):
     """Change user password."""
-    form = Form(request, schema=schema.ChangePassword, defaults={'failed': False})
+    form = Form(request, schema=schema.ChangePassword,
+                defaults={'failed': False})
     user = request.user
     location = get_redirect_location(request)
     if request.method == 'POST':
@@ -505,7 +508,8 @@ def change_password(request):
                 # Save new password to the db
                 user.password = model.encrypt(d['new_password'])
                 model.save(user)
-                request.registry.notify(events.UserChangedPassword(request, user))
+                request.registry.notify(
+                        events.UserChangedPassword(request, user))
                 return HTTPFound(location=location)
             else:
                 form.errors['old_password'] = 'Wrong current password.'
@@ -515,7 +519,7 @@ def change_password(request):
 
 
 @view_config(context=tree.AuthRoot, name="confirm", permission=PUBLIC,
-             renderer='pyramid_simpleauth:templates/confirm_email_address.mako')
+        renderer='pyramid_simpleauth:templates/confirm_email_address.mako')
 def confirm_email(request):
     """Confirm email address using a confirmation link"""
     try:
@@ -529,7 +533,7 @@ def confirm_email(request):
         email.is_confirmed = True
         model.save(email)
         user = email.user
-        event = events.EmailAddressConfirmed(request, user, 
+        event = events.EmailAddressConfirmed(request, user,
                                              data={'email': email})
         request.registry.notify(event)
         location = get_redirect_location(request, user)
@@ -554,7 +558,7 @@ def prefer_email(request):
         else:
             pass
     except schema.Invalid:
-        pass 
+        pass
     location = get_redirect_location(request)
     return HTTPFound(location=location)
 
@@ -571,7 +575,8 @@ def delete_user(request):
         if user is request.user:
             # User deleted itself, must logout
             headers = forget(request)
-            request.registry.notify(events.UserLoggedOut(request, request.user))
+            request.registry.notify(
+                    events.UserLoggedOut(request, request.user))
             resp = HTTPFound(location=location, headers=headers)
         else:
             resp = HTTPFound(location=location)

@@ -1,0 +1,3 @@
+*.py?
+*.sw?
+/src/pyramid_simpleauth.egg-info/
