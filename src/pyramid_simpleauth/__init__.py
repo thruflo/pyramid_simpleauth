@@ -2,6 +2,7 @@
 
 from pyramid.authentication import SessionAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
+from pyramid.settings import asbool
 
 from .hooks import get_authenticated_user, get_is_authenticated
 from .hooks import get_roles, get_user_json
@@ -94,14 +95,12 @@ def includeme(config):
                      use_global_views=True)
 
     # Lock down everything by default.
-    if settings.get('simpleauth.set_default_permission', '').lower() not in [
-            'false', 'f', '0', 'no', 'n']:
+    if asbool(settings.get('simpleauth.set_default_permission', True)):
         permission = settings.get('simpleauth.default_permission', 'view')
         config.set_default_permission(permission)
 
     # Setup authentication and authorisation policies.
-    if settings.get('simpleauth.set_auth_policies', '').lower() not in [
-            'false', 'f', '0', 'no', 'n']:
+    if asbool(settings.get('simpleauth.set_auth_policies', True)):
         authn_policy = SessionAuthenticationPolicy(callback=get_roles)
         authz_policy = ACLAuthorizationPolicy()
         config.set_authorization_policy(authz_policy)
