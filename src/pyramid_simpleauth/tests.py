@@ -10,19 +10,20 @@ from pyramid_simpleauth import model, tree
 from pyramid_simpleauth.model import get_existing_user
 import transaction
 
-try: # pragma: no cover
+try:  # pragma: no cover
     from webtest import TestApp
-except ImportError: # pragma: no cover
+except ImportError:  # pragma: no cover
     pass
 
+
 def config_factory(**settings):
-    """Call with settings to make and configure a configurator instance, binding
-      to an in memory db.
+    """Call with settings to make and configure a configurator instance,
+      binding to an in memory db.
     """
-    
+
     from pyramid.config import Configurator
     from pyramid.session import UnencryptedCookieSessionFactoryConfig
-    
+
     # Patch the settings to use an in memory db for testing, which should
     # be dropped every time the app is created.
     settings['sqlalchemy.url'] = 'sqlite:///:memory:'
@@ -43,26 +44,26 @@ class BaseTestCase(unittest.TestCase):
 
     def setUp(self):
         """Configure the Pyramid application."""
-        
+
         # Configure redirect routes
         view_names = ('change_password', 'change_username', 'confirm_email',
                       'prefer_email')
         settings = dict(('simpleauth.after_%s_route' % view_name,
                          'success_path') for view_name in view_names)
         self.config = config_factory(**settings)
-        # Add routes for change_password, change_username, confirm_email_address
-        # and preferred_email
+        # Add routes for change_password, change_username,
+        # confirm_email_address and preferred_email
         self.config.add_route('success_path', 'victory_path')
         self.app = TestApp(self.config.make_wsgi_app())
-    
+
     def tearDown(self):
         """Make sure the session is cleared between tests."""
-        
+
         Session.remove()
-    
+
     def makeUser(self, username, password):
         """Create and save a user with the credentials provided."""
-        
+
         user = model.User()
         user.username = username
         user.password = model.encrypt(password)
@@ -92,16 +93,16 @@ class BaseTestCase(unittest.TestCase):
 
 
 class TestSignup(BaseTestCase):
-    
+
     def test_render_signup_form(self):
         """A GET request to the signup view should render the signup form."""
-        
+
         res = self.app.get('/auth/signup')
         self.failUnless('<input id="username" name="username"' in res.body)
-    
+
     def test_signup(self):
         """Signup saves a user and their email address."""
-        
+
         # Sanity check there isn't an existing user.
         existing = get_existing_user(username='thruflo')
         self.assertTrue(existing is None)
@@ -113,15 +114,16 @@ class TestSignup(BaseTestCase):
             'confirm': 'password'
         }
         res = self.app.post('/auth/signup', post_data, status=302)
+        assert res  # to satisfy pyflakes
         # Now there is a user.
         existing = get_existing_user(username='user')
         self.assertTrue(existing is not None)
         # And their email address is...
         self.assertTrue(existing.emails[0].address == 'foo@gmail.com')
-    
+
     def test_signup_remember(self):
         """Signup logs the user in."""
-        
+
         # The first request sets an empty session cookie.
         res = self.app.post('/auth/signup', {}, status="*")
         self.assertTrue(len(res.headers['Set-Cookie']) < 200)
@@ -134,10 +136,10 @@ class TestSignup(BaseTestCase):
         }
         res = self.app.post('/auth/signup', post_data, status=302)
         self.assertTrue(len(res.headers['Set-Cookie']) > 250)
-    
+
     def test_signup_redirect(self):
         """Signup redirects to the user's profile page."""
-        
+
         # Signup.
         post_data = {
             'username': 'thruflo',
@@ -159,7 +161,8 @@ class TestSignup(BaseTestCase):
             'confirm': 'password'
         }
         res = self.app.post('/auth/signup', post_data, status=302)
-        self.assertTrue(res.headers['Location'] == 'http://localhost/some/path')
+        self.assertTrue(
+            res.headers['Location'] == 'http://localhost/some/path')
         # The response redirects to the `simpleauth.after_signup_route` route
         # if specified.
         settings = {
@@ -176,10 +179,10 @@ class TestSignup(BaseTestCase):
         }
         res = self.app.post('/auth/signup', post_data, status=302)
         self.assertTrue(res.headers['Location'] == 'http://localhost/wob')
-    
+
     def test_signup_event(self):
         """Signup fires a ``UserSignedUp`` event."""
-        
+
         from pyramid_simpleauth.events import UserSignedUp
         from pyramid_simpleauth.model import User
         # Setup event listener.
@@ -195,30 +198,32 @@ class TestSignup(BaseTestCase):
             'confirm': 'password'
         }
         res = self.app.post('/auth/signup', post_data, status=302)
+        assert res  # to satisfy pyflakes
         # Handler was called with the authentiated user as the second arg.
         self.assertTrue(mock_subscriber.called)
         event = mock_subscriber.call_args_list[0][0][0]
         self.assertTrue(isinstance(event.user, User))
-    
+
 
 class TestLogin(BaseTestCase):
-    
+
     def test_render_login_form(self):
         """A GET request to the login view should render the login form."""
-        
+
         res = self.app.get('/auth/login')
         self.failUnless('<input id="username" name="username"' in res.body)
-    
+
     def test_render_login_next(self):
-        """A GET request to the login view will pass through the `next` param."""
-        
+        """A GET request to the login view will pass through the `next` param.
+        """
+
         res = self.app.get('/auth/login?next=/foo/bar')
         tag = '<input id="next" name="next" type="hidden" value="/foo/bar" />'
         self.failUnless(tag in res.body)
-    
+
     def test_login(self):
         """Login remembers the user."""
-        
+
         # Create a user.
         self.makeUser('thruflo', 'password')
         # Login with the wrong details sets an empty session cookie.
@@ -228,17 +233,18 @@ class TestLogin(BaseTestCase):
         }
         res = self.app.post('/auth/login', post_data, status="*")
         self.assertTrue(len(res.headers['Set-Cookie']) < 200)
-        # Login with the right details remembers the user in the session cookie.
+        # Login with the right details remembers the user in the session
+        # cookie.
         post_data = {
             'username': 'thruflo',
             'password': 'password'
         }
         res = self.app.post('/auth/login', post_data, status="*")
         self.assertTrue(len(res.headers['Set-Cookie']) > 250)
-    
+
     def test_login_redirect(self):
         """login redirects to ``next``."""
-        
+
         # Create a user.
         self.makeUser('thruflo', 'password')
         # Login with the right details redirects to `next`.
@@ -262,7 +268,8 @@ class TestLogin(BaseTestCase):
         self.app = TestApp(self.config.make_wsgi_app())
         res = self.app.post('/auth/login', post_data, status=302)
         self.assertEquals(res.location, 'http://localhost/some/path')
-        # Or the `simpleauth.after_logout_route` route if specified and exposed.
+        # Or the `simpleauth.after_logout_route` route if specified and
+        # exposed.
         settings = {
             'simpleauth.after_login_route': 'flobble'
         }
@@ -271,10 +278,10 @@ class TestLogin(BaseTestCase):
         self.app = TestApp(self.config.make_wsgi_app())
         res = self.app.post('/auth/login', post_data, status=302)
         self.assertTrue(res.headers['Location'] == 'http://localhost/wob')
-    
+
     def test_login_event(self):
         """Login fires a ``UserLoggedIn`` event."""
-        
+
         from pyramid_simpleauth.events import UserLoggedIn
         from pyramid_simpleauth.model import User
         # Setup event listener.
@@ -289,17 +296,18 @@ class TestLogin(BaseTestCase):
             'password': 'password'
         }
         res = self.app.post('/auth/login', post_data, status=302)
+        assert res  # to satisfy pyflakes
         # Handler was called with the authentiated user as the second arg.
         self.assertTrue(mock_subscriber.called)
         event = mock_subscriber.call_args_list[0][0][0]
         self.assertTrue(isinstance(event.user, User))
-    
+
 
 class TestAuthenticate(BaseTestCase):
-    
+
     def test_authenticate_requires_xhr(self):
         """Authenticate must be called with an XMLHTTPRequest."""
-        
+
         # Authentication remembers the user in the session cookie.
         post_data = {
             'username': 'thruflo',
@@ -307,10 +315,10 @@ class TestAuthenticate(BaseTestCase):
         }
         res = self.app.post('/auth/authenticate', post_data, status=404)
         self.assertTrue('The resource could not be found.' in res.body)
-    
+
     def test_authenticate_remembers(self):
         """Authenticate remembers the user."""
-        
+
         # Create a user.
         self.makeUser('thruflo', 'password')
         # Authentication remembers the user in the session cookie.
@@ -321,10 +329,10 @@ class TestAuthenticate(BaseTestCase):
         headers = {'X-Requested-With': 'XMLHttpRequest'}
         res = self.app.post('/auth/authenticate', post_data, headers=headers)
         self.assertTrue(len(res.headers['Set-Cookie']) > 250)
-    
+
     def test_authenticate_returns_json(self):
         """Authenticate returns the user's data in JSON format."""
-        
+
         import json
         # Create a user.
         self.makeUser('thruflo', 'password')
@@ -336,10 +344,10 @@ class TestAuthenticate(BaseTestCase):
         headers = {'X-Requested-With': 'XMLHttpRequest'}
         res = self.app.post('/auth/authenticate', post_data, headers=headers)
         self.assertTrue(json.loads(res.body)['username'] == 'thruflo')
-    
+
     def test_authenticate_logged_in_event(self):
         """Authenticate fires a ``UserLoggedIn`` event."""
-        
+
         from pyramid_simpleauth.events import UserLoggedIn
         from pyramid_simpleauth.model import User
         # Setup event listener.
@@ -355,17 +363,18 @@ class TestAuthenticate(BaseTestCase):
         }
         headers = {'X-Requested-With': 'XMLHttpRequest'}
         res = self.app.post('/auth/authenticate', post_data, headers=headers)
+        assert res  # to satisfy pyflakes
         # Handler was called with the authentiated user as the second arg.
         self.assertTrue(mock_subscriber.called)
         event = mock_subscriber.call_args_list[0][0][0]
         self.assertTrue(isinstance(event.user, User))
-    
+
 
 class TestLogout(BaseTestCase):
-    
+
     def test_logout(self):
         """Logout forgets the user."""
-        
+
         # Create a user.
         self.makeUser('thruflo', 'password')
         # Login.
@@ -378,10 +387,10 @@ class TestLogout(BaseTestCase):
         # Logout.
         res = self.app.post('/auth/logout', status=302)
         self.assertTrue(len(res.headers['Set-Cookie']) < 200)
-    
+
     def test_logout_redirects(self):
         """Logout redirects."""
-        
+
         # The response redirects to `/` by default with no routes or settings.
         res = self.app.post('/auth/logout', status=302)
         self.assertTrue(res.headers['Location'] == 'http://localhost/')
@@ -390,7 +399,8 @@ class TestLogout(BaseTestCase):
         self.config.add_route('index', 'some/path')
         self.app = TestApp(self.config.make_wsgi_app())
         res = self.app.post('/auth/logout', status=302)
-        self.assertTrue(res.headers['Location'] == 'http://localhost/some/path')
+        self.assertTrue(
+            res.headers['Location'] == 'http://localhost/some/path')
         # The response redirects to the `simpleauth.after_logout_route` route
         # if specified.
         settings = {
@@ -401,10 +411,10 @@ class TestLogout(BaseTestCase):
         self.app = TestApp(self.config.make_wsgi_app())
         res = self.app.post('/auth/logout', status=302)
         self.assertTrue(res.headers['Location'] == 'http://localhost/wob')
-    
+
     def test_loggedout_event(self):
         """Logout fires a ``UserLoggedOut`` event."""
-        
+
         from pyramid_simpleauth.events import UserLoggedOut
         from pyramid_simpleauth.model import User
         # Setup event listener.
@@ -421,16 +431,17 @@ class TestLogout(BaseTestCase):
         res = self.app.post('/auth/login', post_data, status=302)
         # Logout.
         res = self.app.post('/auth/logout', status=302)
+        assert res  # to satisfy pyflakes
         # Handler was called with the authentiated user as the second arg.
         self.assertTrue(mock_subscriber.called)
         event = mock_subscriber.call_args_list[0][0][0]
         self.assertTrue(isinstance(event.user, User))
-    
+
     def test_loggedout_event_requires_user(self):
         """Logout only fires a ``UserLoggedOut`` event when there was an
           authenticated user.
         """
-        
+
         from pyramid_simpleauth.events import UserLoggedOut
         # Setup event listener.
         mock_subscriber = Mock()
@@ -439,9 +450,10 @@ class TestLogout(BaseTestCase):
         self.app = TestApp(self.config.make_wsgi_app())
         # Logout.
         res = self.app.post('/auth/logout', status=302)
+        assert res  # to satisfy pyflakes
         # Handler was not called.
         self.assertFalse(mock_subscriber.called)
-    
+
 
 class TestChangePassword(BaseTestCase):
 
@@ -491,7 +503,6 @@ class TestChangePassword(BaseTestCase):
         res = change_password(request)
 
         self.assertTrue(res['user'])
-
 
     def test_new_passwords_dont_match(self):
         "No password change if new passwords don't match"
@@ -648,7 +659,6 @@ class TestConfirmEmailAddress(BaseTestCase):
         res = self.app.get(url)
         self.assertTrue('invalid' in res.body)
 
-
         # Verify that email address has been confirmed
         Session.add(email)
         Session.refresh(email)
@@ -737,8 +747,8 @@ class TestDeleteUser(BaseTestCase):
     def add_user_root(self):
         "Configure app with /users/<username> route"
         self.config = config_factory()
-        self.config.add_route('users', 'users/*traverse', factory=tree.UserRoot,
-                              use_global_views=True)
+        self.config.add_route('users', 'users/*traverse',
+                              factory=tree.UserRoot, use_global_views=True)
         self.app = TestApp(self.config.make_wsgi_app())
 
     def test_success(self):

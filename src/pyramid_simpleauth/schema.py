@@ -5,11 +5,12 @@
 import re
 from urlparse import urlparse
 
-from formencode import validators, Invalid, Schema
+from formencode import validators, Schema
 
 valid_username = re.compile(r'^[.\w-]{1,32}$', re.U)
 valid_password = re.compile(r'^(.){7,200}$', re.U)
 valid_digest = re.compile(r'^[a-f0-9]{28,56}$')
+
 
 class Username(validators.UnicodeString):
     """Validates that the user input matches ``valid_username``, strips and
@@ -73,7 +74,7 @@ class Password(validators.UnicodeString):
 
 
 class Email(validators.Email):
-    """Patch ``validators.Email`` with ``validators.UnicodeString``s 
+    """Patch ``validators.Email`` with ``validators.UnicodeString``s
       ``_to_python`` method.
 
       If it isn't valid, raises an exception::
@@ -85,14 +86,15 @@ class Email(validators.Email):
           >>> Email.to_python('foo@baz')
           Traceback (most recent call last):
           ...
-          Invalid: The domain portion of the email address is invalid (the portion after the @: baz)
+          Invalid: ... email address is invalid (the portion after the @: baz)
 
-      Note that when used with ``resolve_domain=True`` it must be a real domain::
+      Note that when used with ``resolve_domain=True`` it must be a real
+      domain::
 
           >>> Email(resolve_domain=True).to_python('a@b.com')
           Traceback (most recent call last):
           ...
-          Invalid: The domain of the email address does not exist (the portion after the @: b.com)
+          Invalid: ... address does not exist (the portion after the @: b.com)
 
       Otherwise strips and returns as unicode::
 
@@ -104,7 +106,6 @@ class Email(validators.Email):
     def _to_python(self, value, state):
         value = validators.UnicodeString.to_python(value, state)
         return value.strip().lower() if value else value
-
 
 
 class RequestPath(validators.UnicodeString):
@@ -168,7 +169,6 @@ class Digest(validators.UnicodeString):
         if not valid_digest.match(value):
             msg = self.message("invalid", state)
             raise validators.Invalid(msg, value, state)
-
 
 
 class UniqueUsername(Username):
@@ -254,12 +254,12 @@ class UniqueEmail(Email):
             raise validators.Invalid(msg, value, state)
 
 
-
 class FlexibleSchema(Schema):
     """``formencode.Schema`` that defaults to allow and filter extra fields."""
 
     filter_extra_fields = True
     allow_extra_fields = True
+
 
 class Signup(FlexibleSchema):
     """Form fields to render and validate for signup."""
@@ -270,16 +270,18 @@ class Signup(FlexibleSchema):
     confirm = Password(not_empty=True)
     chained_validators = [
         validators.FieldsMatch(
-            'password', 
+            'password',
             'confirm'
         )
     ]
+
 
 class Authenticate(FlexibleSchema):
     """Form fields to validate when authenticating over XHR."""
 
     username = Username(not_empty=True)
     password = Password(not_empty=True)
+
 
 class Login(FlexibleSchema):
     """Form fields to render and validate for login."""
@@ -296,7 +298,7 @@ class ChangePassword(FlexibleSchema):
     new_confirm = Password(not_empty=True)
     chained_validators = [
         validators.FieldsMatch(
-            'new_password', 
+            'new_password',
             'new_confirm'
         )
     ]
