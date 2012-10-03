@@ -5,6 +5,7 @@
 from base64 import urlsafe_b64decode
 import inspect
 
+from formencode import Invalid
 from zope.interface.registry import ComponentLookupError
 
 from pyramid.httpexceptions import HTTPForbidden, HTTPFound, HTTPUnauthorized
@@ -24,7 +25,7 @@ def validate_next_param(request):
     next_ = request.params.get('next', request.POST.get('next'))
     try:
         next_ = schema.RequestPath.to_python(next_)
-    except schema.Invalid:
+    except Invalid:
         next_ = None
     return next_
 
@@ -557,7 +558,7 @@ def prefer_email(request):
             request.registry.notify(event)
         else:
             pass
-    except schema.Invalid:
+    except Invalid:
         pass
     location = get_redirect_location(request)
     return HTTPFound(location=location)

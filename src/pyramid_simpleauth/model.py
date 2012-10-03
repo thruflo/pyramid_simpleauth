@@ -24,7 +24,7 @@ from zope.interface import implements
 from pyramid.security import ALL_PERMISSIONS
 from pyramid.security import Allow, Deny
 from pyramid.security import Authenticated, Everyone
-from pyramid_basemodel import Base, BaseMixin
+from pyramid_basemodel import Base, BaseMixin, Session, save
 
 from .interfaces import IEmail, IRole, IUser
 
