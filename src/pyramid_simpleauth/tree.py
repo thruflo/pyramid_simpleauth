@@ -5,9 +5,10 @@
 from pyramid.security import ALL_PERMISSIONS
 from pyramid.security import Allow, Deny
 from pyramid.security import Authenticated, Everyone
+from formencode import Invalid
 
 from .model import get_existing_user
-from .schema import Username, Invalid
+from .schema import Username
 
 
 class AuthRoot(object):
