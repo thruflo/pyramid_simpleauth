@@ -74,7 +74,7 @@ class BaseTestCase(unittest.TestCase):
 
     def makeUserWithEmail(self):
         "Helper method that creates a user with an email"
-        user = self.makeUser(u'thruflo', u'password')
+        user = self.makeUser(u'thruflo', u'Password')
         Session.add(user)
         user.emails.append(model.Email(address=u'foo@example.com'))
         transaction.commit()
@@ -86,7 +86,7 @@ class BaseTestCase(unittest.TestCase):
         if not post_data:
             post_data = {
                 'username': 'thruflo',
-                'password': 'password'
+                'password': 'Password'
             }
         headers = {'X-Requested-With': 'XMLHttpRequest'}
         return self.app.post('/auth/authenticate', post_data, headers=headers)
@@ -110,8 +110,8 @@ class TestSignup(BaseTestCase):
         post_data = {
             'username': 'user',
             'email': 'foo@gmail.com',
-            'password': 'password',
-            'confirm': 'password'
+            'password': 'Password',
+            'confirm': 'Password'
         }
         res = self.app.post('/auth/signup', post_data, status=302)
         assert res  # to satisfy pyflakes
@@ -131,8 +131,8 @@ class TestSignup(BaseTestCase):
         post_data = {
             'username': 'user',
             'email': 'foo@gmail.com',
-            'password': 'password',
-            'confirm': 'password'
+            'password': 'Password',
+            'confirm': 'Password'
         }
         res = self.app.post('/auth/signup', post_data, status=302)
         self.assertTrue(len(res.headers['Set-Cookie']) > 250)
@@ -144,8 +144,8 @@ class TestSignup(BaseTestCase):
         post_data = {
             'username': 'thruflo',
             'email': 'foo@gmail.com',
-            'password': 'password',
-            'confirm': 'password'
+            'password': 'Password',
+            'confirm': 'Password'
         }
         res = self.app.post('/auth/signup', post_data, status=302)
         # The response redirects to `/` by default with no routes or settings.
@@ -157,8 +157,8 @@ class TestSignup(BaseTestCase):
         post_data = {
             'username': 'thruflo2',
             'email': 'foo+2@gmail.com',
-            'password': 'password',
-            'confirm': 'password'
+            'password': 'Password',
+            'confirm': 'Password'
         }
         res = self.app.post('/auth/signup', post_data, status=302)
         self.assertTrue(
@@ -174,8 +174,8 @@ class TestSignup(BaseTestCase):
         post_data = {
             'username': 'thruflo3',
             'email': 'foo+3@gmail.com',
-            'password': 'password',
-            'confirm': 'password'
+            'password': 'Password',
+            'confirm': 'Password'
         }
         res = self.app.post('/auth/signup', post_data, status=302)
         self.assertTrue(res.headers['Location'] == 'http://localhost/wob')
@@ -194,8 +194,8 @@ class TestSignup(BaseTestCase):
         post_data = {
             'username': 'jo',
             'email': 'foo@gmail.com',
-            'password': 'password',
-            'confirm': 'password'
+            'password': 'Password',
+            'confirm': 'Password'
         }
         res = self.app.post('/auth/signup', post_data, status=302)
         assert res  # to satisfy pyflakes
@@ -225,7 +225,7 @@ class TestLogin(BaseTestCase):
         """Login remembers the user."""
 
         # Create a user.
-        self.makeUser('thruflo', 'password')
+        self.makeUser('thruflo', 'Password')
         # Login with the wrong details sets an empty session cookie.
         post_data = {
             'username': 'pooplo',
@@ -237,7 +237,7 @@ class TestLogin(BaseTestCase):
         # cookie.
         post_data = {
             'username': 'thruflo',
-            'password': 'password'
+            'password': 'Password'
         }
         res = self.app.post('/auth/login', post_data, status="*")
         self.assertTrue(len(res.headers['Set-Cookie']) > 250)
@@ -246,11 +246,11 @@ class TestLogin(BaseTestCase):
         """login redirects to ``next``."""
 
         # Create a user.
-        self.makeUser('thruflo', 'password')
+        self.makeUser('thruflo', 'Password')
         # Login with the right details redirects to `next`.
         post_data = {
             'username': 'thruflo',
-            'password': 'password',
+            'password': 'Password',
             'next': '/foo/bar'
         }
         res = self.app.post('/auth/login', post_data, status=302)
@@ -258,7 +258,7 @@ class TestLogin(BaseTestCase):
         # If `next` is not provided, redirects to `/`
         post_data = {
             'username': 'thruflo',
-            'password': 'password'
+            'password': 'Password'
         }
         res = self.app.post('/auth/login', post_data, status=302)
         self.assertTrue(res.headers['Location'] == 'http://localhost/')
@@ -290,10 +290,10 @@ class TestLogin(BaseTestCase):
         self.config.add_subscriber(mock_subscriber, UserLoggedIn)
         self.app = TestApp(self.config.make_wsgi_app())
         # Login.
-        self.makeUser('thruflo', 'password')
+        self.makeUser('thruflo', 'Password')
         post_data = {
             'username': 'thruflo',
-            'password': 'password'
+            'password': 'Password'
         }
         res = self.app.post('/auth/login', post_data, status=302)
         assert res  # to satisfy pyflakes
@@ -311,7 +311,7 @@ class TestAuthenticate(BaseTestCase):
         # Authentication remembers the user in the session cookie.
         post_data = {
             'username': 'thruflo',
-            'password': 'password'
+            'password': 'Password'
         }
         res = self.app.post('/auth/authenticate', post_data, status=404)
         self.assertTrue('The resource could not be found.' in res.body)
@@ -320,11 +320,11 @@ class TestAuthenticate(BaseTestCase):
         """Authenticate remembers the user."""
 
         # Create a user.
-        self.makeUser('thruflo', 'password')
+        self.makeUser('thruflo', 'Password')
         # Authentication remembers the user in the session cookie.
         post_data = {
             'username': 'thruflo',
-            'password': 'password'
+            'password': 'Password'
         }
         headers = {'X-Requested-With': 'XMLHttpRequest'}
         res = self.app.post('/auth/authenticate', post_data, headers=headers)
@@ -335,11 +335,11 @@ class TestAuthenticate(BaseTestCase):
 
         import json
         # Create a user.
-        self.makeUser('thruflo', 'password')
+        self.makeUser('thruflo', 'Password')
         # Returns JSON.
         post_data = {
             'username': 'thruflo',
-            'password': 'password'
+            'password': 'Password'
         }
         headers = {'X-Requested-With': 'XMLHttpRequest'}
         res = self.app.post('/auth/authenticate', post_data, headers=headers)
@@ -356,10 +356,10 @@ class TestAuthenticate(BaseTestCase):
         self.config.add_subscriber(mock_subscriber, UserLoggedIn)
         self.app = TestApp(self.config.make_wsgi_app())
         # Login.
-        self.makeUser('thruflo', 'password')
+        self.makeUser('thruflo', 'Password')
         post_data = {
             'username': 'thruflo',
-            'password': 'password'
+            'password': 'Password'
         }
         headers = {'X-Requested-With': 'XMLHttpRequest'}
         res = self.app.post('/auth/authenticate', post_data, headers=headers)
@@ -376,11 +376,11 @@ class TestLogout(BaseTestCase):
         """Logout forgets the user."""
 
         # Create a user.
-        self.makeUser('thruflo', 'password')
+        self.makeUser('thruflo', 'Password')
         # Login.
         post_data = {
             'username': 'thruflo',
-            'password': 'password'
+            'password': 'Password'
         }
         res = self.app.post('/auth/login', post_data, status=302)
         self.assertTrue(len(res.headers['Set-Cookie']) > 250)
@@ -423,10 +423,10 @@ class TestLogout(BaseTestCase):
         self.config.add_subscriber(mock_subscriber, UserLoggedOut)
         self.app = TestApp(self.config.make_wsgi_app())
         # Login.
-        self.makeUser('thruflo', 'password')
+        self.makeUser('thruflo', 'Password')
         post_data = {
             'username': 'thruflo',
-            'password': 'password'
+            'password': 'Password'
         }
         res = self.app.post('/auth/login', post_data, status=302)
         # Logout.
@@ -461,7 +461,7 @@ class TestChangePassword(BaseTestCase):
         "No password change if old password is not corret"
 
         # Create a user.
-        user = self.makeUser('thruflo', 'password')
+        user = self.makeUser('thruflo', 'Password')
         Session.add(user)
         old_hash = user.password
 
@@ -489,13 +489,13 @@ class TestChangePassword(BaseTestCase):
         from pyramid import testing
 
         # Create a user.
-        user = self.makeUser('thruflo', 'password')
+        user = self.makeUser('thruflo', 'Password')
         Session.add(user)
 
         post_data = {
             'old_password': 'foobarbaz',
-            'new_password': 'swordpas',
-            'new_confirm':  'swordpas',
+            'new_password': 'sworDpas',
+            'new_confirm':  'sworDpas',
         }
         request = testing.DummyRequest(post=post_data)
         request.user = user
@@ -508,7 +508,7 @@ class TestChangePassword(BaseTestCase):
         "No password change if new passwords don't match"
 
         # Create a user.
-        user = self.makeUser('thruflo', 'password')
+        user = self.makeUser('thruflo', 'Password')
         Session.add(user)
         old_hash = user.password
 
@@ -516,7 +516,7 @@ class TestChangePassword(BaseTestCase):
 
         # Attempt to change password.
         post_data = {
-            'old_password': 'password',
+            'old_password': 'Password',
             'new_password': 'swordpas',
             'new_confirm':  'oswdrpsa',
         }
@@ -532,7 +532,7 @@ class TestChangePassword(BaseTestCase):
         "If all conditions are met, change password"
 
         # Create a user.
-        user = self.makeUser('thruflo', 'password')
+        user = self.makeUser('thruflo', 'Password')
         Session.add(user)
         old_hash = user.password
 
@@ -540,9 +540,9 @@ class TestChangePassword(BaseTestCase):
 
         # Attempt to change password.
         post_data = {
-            'old_password': 'password',
-            'new_password': 'swordpas',
-            'new_confirm':  'swordpas',
+            'old_password': 'Password',
+            'new_password': 'sworDpas',
+            'new_confirm':  'sworDpas',
             'next':         '/foo/bar',
         }
         res = self.app.post('/auth/change_password', post_data)
@@ -561,7 +561,7 @@ class TestChangeUsername(BaseTestCase):
     def test_success(self):
         "Change username with valid input"
         # Create a user.
-        user = self.makeUser(u'thruflo', u'password')
+        user = self.makeUser(u'thruflo', u'Password')
 
         # Attempt to change username
         post_data = {
@@ -581,7 +581,7 @@ class TestChangeUsername(BaseTestCase):
     def test_failure(self):
         "Change username with invalid input"
         # Create a user.
-        user = self.makeUser(u'thruflo', u'password')
+        user = self.makeUser(u'thruflo', u'Password')
 
         # Attempt to assign bogus username
         post_data = {
@@ -755,7 +755,7 @@ class TestDeleteUser(BaseTestCase):
         "User can delete itself"
         self.add_user_root()
 
-        user = self.makeUser('thruflo', 'password')
+        user = self.makeUser('thruflo', 'Password')
         Session.add(user)
 
         self.authenticate()
@@ -779,17 +779,17 @@ class TestDeleteUser(BaseTestCase):
         self.assertTrue(len(res.headers['Set-Cookie']) < 200)
 
     def test_other_user(self):
-        "Non-admin user cannot delete ohter user"
+        "Non-admin user cannot delete other user"
         self.add_user_root()
 
         # User to delete
-        self.makeUser('alice', 'password')
+        self.makeUser('alice', 'Password')
 
         # Login as other user
-        bob = self.makeUser('bob', 'password')
+        bob = self.makeUser('bob', 'Password')
         model.save(bob)
         transaction.commit()
-        self.authenticate(username='bob', password='password')
+        self.authenticate(username='bob', password='Password')
 
         # Try to delete user
         res = self.app.post('/users/alice/delete_user', status=403)
@@ -804,14 +804,14 @@ class TestDeleteUser(BaseTestCase):
         self.add_user_root()
 
         # User to delete
-        self.makeUser('alice', 'password')
+        self.makeUser('alice', 'Password')
 
         # Login as admin
-        admin = self.makeUser('admin', 'password')
+        admin = self.makeUser('admin', 'Password')
         admin.roles.append(model.Role(name='admin'))
         model.save(admin)
         transaction.commit()
-        self.authenticate(username='admin', password='password')
+        self.authenticate(username='admin', password='Password')
 
         # Delete user
         res = self.app.post('/users/alice/delete_user')
