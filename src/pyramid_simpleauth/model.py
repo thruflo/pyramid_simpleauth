@@ -45,10 +45,10 @@ def encrypt(raw_password):
           >>> encrypt('Foo ')
           u'digest'
 
-      Using a lower case, stripped version of the raw password::
+      Using a stripped version of the raw password::
 
           >>> model.pwd_context.encrypt.call_args[0][0]
-          'foo'
+          'Foo'
 
       Teardown::
 
@@ -56,7 +56,7 @@ def encrypt(raw_password):
 
     """
 
-    v = raw_password.strip().lower()
+    v = raw_password.strip()
     s = pwd_context.encrypt(v, scheme="sha512_crypt", rounds=90000)
     return unicode(s)
 

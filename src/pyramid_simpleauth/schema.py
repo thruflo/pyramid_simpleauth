@@ -86,7 +86,7 @@ class Email(validators.Email):
           >>> Email.to_python('foo@baz')
           Traceback (most recent call last):
           ...
-          Invalid: The domain of the email address does not exist (the portion after the @: b.com)
+          Invalid: The domain portion of the email address is invalid (the portion after the @: baz)
 
       Note that when used with ``resolve_domain=True`` it must be a real
       domain::
