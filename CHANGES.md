@@ -1,4 +1,10 @@
 
+# 0.4
+
+Stop forcing passwords to lower case.  Note that this is a fairly major
+api change and means that existing user accounts may need to login with
+lower case passwords where before they were using upper case.
+
 # 0.3
 
 Limit `/auth/logout` to POST requests.
