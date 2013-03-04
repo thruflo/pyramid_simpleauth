@@ -113,6 +113,11 @@ class User(Base, BaseMixin):
     __tablename__ = 'auth_users'
 
     @property
+    def __name__(self):
+        return self.username
+    
+
+    @property
     def __acl__(self):
         """Grants all permissions to ``self.username``::
 
