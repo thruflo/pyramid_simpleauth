@@ -8,6 +8,7 @@
 __all__ = [
     'PublicMixin',
     'PrivateMixin',
+    'PersonalMixin',
     'PublicOwnedMixin',
     'PrivateOwnedMixin'
 ]
@@ -36,6 +37,22 @@ class PrivateMixin(object):
         (Allow, Authenticated, 'view'),
         (Deny, Everyone, ALL_PERMISSIONS),
     ]
+
+class PersonalMixin(object):
+    """Only ``self.user`` and admins can access."""
+    
+    @property
+    def __acl__(self):
+        """Grants ``view``, ``edit`` and ``delete`` to ``self.user``."""
+        
+        return [
+            (Allow, 'r:admin', ALL_PERMISSIONS),
+            (Allow, self.user.canonical_id, 'view'),
+            (Allow, self.user.canonical_id, 'edit'),
+            (Allow, self.user.canonical_id, 'delete'),
+            (Deny, Everyone, ALL_PERMISSIONS)
+        ]
+    
 
 class PublicOwnedMixin(object):
     """Anyone can view. ``self.user`` can edit, etc."""
