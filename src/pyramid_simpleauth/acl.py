@@ -42,13 +42,15 @@ class PublicOwnedMixin(object):
     
     @property
     def __acl__(self):
-        """Grants all permissions to admins and ``self.user`` and ``view`` to
-          ``Everybody``.
+        """Grants ``view``, ``edit`` and ``delete`` to admins and ``self.user``
+          and ``view`` to ``Everybody``.
         """
         
         return [
             (Allow, 'r:admin', ALL_PERMISSIONS),
-            (Allow, self.user.canonical_id, ALL_PERMISSIONS),
+            (Allow, self.user.canonical_id, 'view'),
+            (Allow, self.user.canonical_id, 'edit'),
+            (Allow, self.user.canonical_id, 'delete'),
             (Allow, Everyone, 'view'),
             (Deny, Everyone, ALL_PERMISSIONS)
         ]
@@ -59,13 +61,15 @@ class PrivateOwnedMixin(object):
     
     @property
     def __acl__(self):
-        """Grants all permissions to admins and ``self.user`` and ``view`` to
-          ``Authenticated``.
+        """Grants ``view``, ``edit`` and ``delete`` to admins and ``self.user``
+          and ``view`` to ``Authenticated``.
         """
         
         return [
             (Allow, 'r:admin', ALL_PERMISSIONS),
-            (Allow, self.user.canonical_id, ALL_PERMISSIONS),
+            (Allow, self.user.canonical_id, 'view'),
+            (Allow, self.user.canonical_id, 'edit'),
+            (Allow, self.user.canonical_id, 'delete'),
             (Allow, Authenticated, 'view'),
             (Deny, Everyone, ALL_PERMISSIONS)
         ]
