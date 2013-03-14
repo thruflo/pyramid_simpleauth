@@ -1,4 +1,9 @@
 
+# 0.5
+
+Restrict the set of permissions granted to `self.user` in owned acl mixins. 
+Add a `PersonalMixin` for content other users shouldn't see.
+
 # 0.4
 
 Stop forcing passwords to lower case.  Note that this is a fairly major
