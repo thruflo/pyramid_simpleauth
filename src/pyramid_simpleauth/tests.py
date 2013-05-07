@@ -767,13 +767,13 @@ class TestDeleteUser(BaseTestCase):
         self.assertTrue('Are you really sure' in res.body)
 
         # Verify that the user has not yet been deleted
-        self.assertIsNotNone(get_existing_user(username='thruflo'))
+        self.assertTrue(get_existing_user(username='thruflo') is not None)
 
         # Delete the user
         res = self.app.post('/users/thruflo/delete_user')
 
         # Verify that the user has now been deleted
-        self.assertIsNone(get_existing_user(username='thruflo'))
+        self.assertTrue(get_existing_user(username='thruflo') is None)
 
         # User should be logged out
         self.assertTrue(len(res.headers['Set-Cookie']) < 200)
@@ -795,9 +795,9 @@ class TestDeleteUser(BaseTestCase):
         res = self.app.post('/users/alice/delete_user', status=403)
 
         # Verify that the user has not been deleted
-        self.assertIsNotNone(get_existing_user(username='alice'))
+        self.assertTrue(get_existing_user(username='alice') is not None)
         # User should still be logged in
-        self.assertGreater(len(res.headers['Set-Cookie']), 250)
+        self.assertTrue(len(res.headers['Set-Cookie']) > 250)
 
     def test_admin(self):
         "Admin should be allowed to delete any user"
@@ -817,6 +817,6 @@ class TestDeleteUser(BaseTestCase):
         res = self.app.post('/users/alice/delete_user')
 
         # Verify that user has been successfully deleted
-        self.assertIsNone(get_existing_user(username='alice'))
+        self.assertTrue(get_existing_user(username='alice') is None)
         # Admin should still be logged in
-        self.assertGreater(len(res.headers['Set-Cookie']), 250)
+        self.assertTrue(len(res.headers['Set-Cookie']) > 250)
