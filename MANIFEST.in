@@ -1,2 +1,2 @@
-include UNLICENSE *.md *.py
+include UNLICENSE setup.cfg *.md *.py
 recursive-include src *.py

@@ -3,16 +3,16 @@
 
 from setuptools import setup, find_packages
 
-
 def _read(file_name):
     sock = open(file_name)
     text = sock.read()
     sock.close()
     return text
 
+
 setup(
     name='pyramid_simpleauth',
-    version='0.5',
+    version='0.5.1',
     description='Session based authentication and role based security \
                    for a Pyramid web application.',
     author='James Arthur',

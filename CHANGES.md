@@ -1,4 +1,8 @@
 
+# 0.5.1
+
+Fix test compatibility and tweak docs.
+
 # 0.5
 
 Restrict the set of permissions granted to `self.user` in owned acl mixins. 
