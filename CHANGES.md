@@ -1,4 +1,8 @@
 
+# 0.6
+
+Log user out after change password.
+
 # 0.5.2
 
 0.5.1 was a brown bag release: this fixes the distribution by re-including
