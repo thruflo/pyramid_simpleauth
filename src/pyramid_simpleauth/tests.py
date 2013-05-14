@@ -555,6 +555,40 @@ class TestChangePassword(BaseTestCase):
         # Verify redirect
         self.assertEquals(res.headers['Location'], 'http://localhost/foo/bar')
 
+    def test_sucess_logs_user_out(self):
+        "Changing a user password logs the user out."
+
+        from pyramid_simpleauth.events import UserLoggedOut
+        from pyramid_simpleauth.model import User
+        mock_subscriber = Mock()
+        self.config = config_factory()
+        self.config.add_subscriber(mock_subscriber, UserLoggedOut)
+        self.app = TestApp(self.config.make_wsgi_app())
+
+        # Create a user.
+        user = self.makeUser('thruflo', 'Password')
+        Session.add(user)
+        old_hash = user.password
+
+        self.authenticate()
+
+        # Attempt to change password.
+        post_data = {
+            'old_password': 'Password',
+            'new_password': 'sworDpas',
+            'new_confirm':  'sworDpas',
+            'next':         '/foo/bar',
+        }
+        res = self.app.post('/auth/change_password', post_data)
+
+        # Verify logged out.
+        self.assertTrue(len(res.headers['Set-Cookie']) < 200)
+
+        # Handler was called with the authentiated user as the second arg.
+        self.assertTrue(mock_subscriber.called)
+        event = mock_subscriber.call_args_list[0][0][0]
+        self.assertTrue(isinstance(event.user, User))
+
 
 class TestChangeUsername(BaseTestCase):
 

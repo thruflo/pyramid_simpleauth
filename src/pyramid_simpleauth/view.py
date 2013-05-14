@@ -497,21 +497,32 @@ def change_username(request):
              renderer='pyramid_simpleauth:templates/change_password.mako')
 def change_password(request):
     """Change user password."""
-    form = Form(request, schema=schema.ChangePassword,
-                defaults={'failed': False})
+    
+    # Unpack.
     user = request.user
+    notify = request.registry.notify
+    
+    # Validate the request.
+    form = Form(request, schema=schema.ChangePassword,
+            defaults={'failed': False})
     location = get_redirect_location(request)
     if request.method == 'POST':
         if form.validate():
             d = form.data
             user = model.authenticate(user.username, d['old_password'])
             if user:
-                # Save new password to the db
+                # Save new password to the db.
                 user.password = model.encrypt(d['new_password'])
                 model.save(user)
-                request.registry.notify(
-                        events.UserChangedPassword(request, user))
-                return HTTPFound(location=location)
+                # Notify that the password changed.
+                notify(events.UserChangedPassword(request, user))
+                # Log the user out, so that a change of password will lock out
+                # someone who has compromised the existing password.
+                headers = forget(request)
+                # Notify that the user is logged out.
+                notify(events.UserLoggedOut(request, request.user))
+                # Redirect.
+                return HTTPFound(location=location, headers=headers)
             else:
                 form.errors['old_password'] = 'Wrong current password.'
 
