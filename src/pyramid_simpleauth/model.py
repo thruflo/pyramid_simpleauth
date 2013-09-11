@@ -18,6 +18,7 @@ from sqlalchemy import event
 from sqlalchemy import Column, ForeignKey, Table
 from sqlalchemy import Boolean, Integer, Unicode
 from sqlalchemy.orm import relationship
+from sqlalchemy.schema import UniqueConstraint
 
 from zope.interface import implements
 
@@ -224,8 +225,11 @@ class Email(Base, BaseMixin):
     implements(IEmail)
 
     __tablename__ = 'auth_emails'
+    __table_args__ = (
+        UniqueConstraint('address', 'user_id', name='auth_user_email_address_uc'),
+    )
 
-    address = Column(Unicode(255), unique=True)
+    address = Column(Unicode(255))
 
     confirmation_hash = Column(Unicode(28), default=generate_confirmation_hash)
     is_confirmed = Column(Boolean, default=False)
