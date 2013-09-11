@@ -561,7 +561,7 @@ def prefer_email(request):
     validator = schema.Email()
     try:
         email_address = validator.to_python(request.POST.get('email_address'))
-        email = model.get_existing_email(email_address)
+        email = model.get_existing_email(email_address, user_id=user.id)
         if email:
             user.preferred_email = email
             model.save(user)

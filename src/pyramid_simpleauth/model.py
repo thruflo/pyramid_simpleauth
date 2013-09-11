@@ -266,7 +266,7 @@ def get_existing_user(cls=User, **kwargs):
     return query.first()
 
 
-def get_existing_email(address, cls=Email):
+def get_existing_email(address, user_id=None, cls=Email):
     """Get an existing email from the ``address`` provided.
 
       Setup::
@@ -283,10 +283,20 @@ def get_existing_email(address, cls=Email):
           'email1'
           >>> mock_cls.query.filter_by.assert_called_with(
           ...         address='foo@bar.com')
-
+      
+      Optionally filtering also by the user_id::
+      
+          >>> get_existing_email('foo@bar.com', user_id=1234, cls=mock_cls)
+          'email1'
+          >>> mock_cls.query.filter_by.assert_called_with(
+          ...         address='foo@bar.com', user_id=1234)
+      
     """
-
-    query = cls.query.filter_by(address=address)
+    
+    filter_kwargs = {'address': address}
+    if user_id is not None:
+        filter_kwargs['user_id'] = user_id
+    query = cls.query.filter_by(**filter_kwargs)
     return query.first()
 
 
