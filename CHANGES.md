@@ -1,4 +1,13 @@
 
+# 0.7
+
+Replace global unique constraint on `auth_emails.address` with a composite
+constraint on `.address` and `.user_id`.
+
+As a consequence, update the `model.get_existing_email` function with an
+optional `user_id` parameter and update the `./prefer_email` view to use it
+-- thereby making sure the preferred email belongs to the user.
+
 # 0.6
 
 Log user out after change password.
