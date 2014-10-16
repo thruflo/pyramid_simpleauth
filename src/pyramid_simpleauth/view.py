@@ -21,13 +21,24 @@ from pyramid_simpleauth import events, model, schema, tree
 
 
 def validate_next_param(request):
-    "Validate the next param"
-    next_ = request.params.get('next', request.POST.get('next'))
+    """Validate the next param."""
+
+    candidate = request.params.get('next', request.POST.get('next'))
     try:
-        next_ = schema.RequestPath.to_python(next_)
+        value = schema.RequestPath.to_python(candidate)
     except Invalid:
-        next_ = None
-    return next_
+        value = None
+    return value
+
+def validate_username_param(request):
+    """Validate the username param."""
+
+    candidate = request.params.get('username', request.POST.get('username'))
+    try:
+        value = schema.Username.to_python(candidate)
+    except Invalid:
+        value = None
+    return value
 
 
 def get_redirect_location(request, user=None, route_name='users',
@@ -113,10 +124,17 @@ def forbidden_view(request):
 
     if unauthenticated_userid(request):
         return HTTPForbidden()
-    query = (('next', request.path),)
-    url = request.route_url('simpleauth', traverse=('login',), _query=query)
+    
+    query = {
+        'next': request.path
+    }
+    username_param = validate_username_param(request)
+    if username_param:
+        query['username'] = username_param
+    
+    url = request.route_url('simpleauth', traverse=('login',),
+            _query=query.items())
     return HTTPFound(location=url)
-
 
 @view_config(context=HTTPUnauthorized, permission=PUBLIC)
 def unauthorised_view(request):
@@ -397,8 +415,12 @@ def login(request):
     """
 
     next_ = validate_next_param(request)
+    username_param = validate_username_param(request)
+    defaults = {'failed': False}
+    if username_param:
+        defaults['username'] = username_param
     # Validate the rest of the user input.
-    form = Form(request, schema=schema.Login, defaults={'failed': False})
+    form = Form(request, schema=schema.Login, defaults=defaults)
     if request.method == 'POST':
         if form.validate():
             d = form.data
