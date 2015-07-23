@@ -1,4 +1,8 @@
 
+# 0.7.2
+
+Bump to remove `src/*.egg-info` directory from PyPI distribution.
+
 # 0.7
 
 Replace global unique constraint on `auth_emails.address` with a composite
