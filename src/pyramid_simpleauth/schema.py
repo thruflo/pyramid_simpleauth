@@ -265,7 +265,7 @@ class Signup(FlexibleSchema):
     """Form fields to render and validate for signup."""
 
     username = UniqueUsername(not_empty=True)
-    email = UniqueEmail(resolve_domain=True, not_empty=True)
+    email = UniqueEmail(resolve_domain=False, not_empty=True)
     password = Password(not_empty=True)
     confirm = Password(not_empty=True)
     chained_validators = [
