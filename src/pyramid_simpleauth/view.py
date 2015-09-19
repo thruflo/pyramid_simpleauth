@@ -124,14 +124,14 @@ def forbidden_view(request):
 
     if unauthenticated_userid(request):
         return HTTPForbidden()
-    
+
     query = {
         'next': request.path
     }
     username_param = validate_username_param(request)
     if username_param:
         query['username'] = username_param
-    
+
     url = request.route_url('simpleauth', traverse=('login',),
             _query=query.items())
     return HTTPFound(location=url)
@@ -519,11 +519,11 @@ def change_username(request):
              renderer='pyramid_simpleauth:templates/change_password.mako')
 def change_password(request):
     """Change user password."""
-    
+
     # Unpack.
     user = request.user
     notify = request.registry.notify
-    
+
     # Validate the request.
     form = Form(request, schema=schema.ChangePassword,
             defaults={'failed': False})

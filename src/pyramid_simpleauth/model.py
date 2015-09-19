@@ -301,7 +301,7 @@ class User(Base, BaseMixin):
     @property
     def __name__(self):
         return self.username
-    
+
 
     @property
     def __acl__(self):
@@ -402,7 +402,6 @@ class User(Base, BaseMixin):
             self.emails.append(email)
 
     preferred_email = property(get_preferred_email, set_preferred_email)
-
 
 class Email(Base, BaseMixin):
     """A user's email address with optional confirmation data."""
