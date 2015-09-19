@@ -6,6 +6,7 @@
 """
 
 __all__ = [
+    'ParanoidMixin',
     'PublicMixin',
     'PrivateMixin',
     'PersonalMixin',
@@ -19,6 +20,14 @@ logger = logging.getLogger(__name__)
 from pyramid.security import ALL_PERMISSIONS
 from pyramid.security import Allow, Deny
 from pyramid.security import Authenticated, Everyone
+
+class ParanoidMixin(object):
+    """Useful as a paranoid default."""
+
+    __acl__ = [
+        (Allow, 'r:admin', ALL_PERMISSIONS),
+        (Deny, Everyone, ALL_PERMISSIONS)
+    ]
 
 class PublicMixin(object):
     """Anyone can view."""
