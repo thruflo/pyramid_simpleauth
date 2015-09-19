@@ -107,7 +107,7 @@ def forbidden_view(request):
           >>> view.unauthenticated_userid.return_value = None
           >>> response = forbidden_view(mock_request)
           >>> kwargs = {
-          ...     '_query': (('next', '/forbidden/page'),),
+          ...     '_query': [('next', '/forbidden/page'),],
           ...     'traverse': ('login',)
           ... }
           >>> mock_request.route_url.assert_called_with('simpleauth', **kwargs)

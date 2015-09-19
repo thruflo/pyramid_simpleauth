@@ -27,11 +27,13 @@ def config_factory(**settings):
     # Patch the settings to use an in memory db for testing, which should
     # be dropped every time the app is created.
     settings['sqlalchemy.url'] = 'sqlite:///:memory:'
+    settings['basemodel.should_create_all'] = True
     settings['basemodel.should_drop_all'] = True
     # Initialise the ``Configurator`` and setup a session factory.
     config = Configurator(settings=settings)
     config.set_session_factory(UnencryptedCookieSessionFactoryConfig('psst'))
     # Include the dependencies.
+    config.include('pyramid_mako')
     config.include('pyramid_tm')
     config.include('pyramid_basemodel')
     # Include simpleauth.

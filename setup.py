@@ -44,6 +44,7 @@ setup(
         'pyramid_basemodel',
         'pyramid_simpleform',
         'pyramid',
+        'pyramid_mako',
         'SQLAlchemy',
         'formencode',
         'passlib',
