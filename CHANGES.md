@@ -1,4 +1,11 @@
 
+# 0.8
+
+Switch the email schema to not resolve domains by default -- this avoids
+a module import level dependency on dns resolution.
+
+Add bearer token orm, repo and auth policies. Tidy up the model module. 
+
 # 0.7.2
 
 Bump to remove `src/*.egg-info` directory from PyPI distribution.
