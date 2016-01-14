@@ -136,9 +136,7 @@ class EmailPreferred(object):
 
 @implementer(IUserDeleted)
 class UserDeleted(object):
-    """An instance of this class is emitted whenever a user prefers an email
-       address, typically by clicking on a button in an account management
-       page.
+    """An instance of this class is emitted whenever an user is deleted.
     """
 
     def __init__(self, request, username, data=None):
