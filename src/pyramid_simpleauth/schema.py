@@ -6,6 +6,7 @@ import re
 from urlparse import urlparse
 
 from formencode import validators, Schema
+from formencode import Invalid
 
 valid_username = re.compile(r'^[.\w-]{1,32}$', re.U)
 valid_password = re.compile(r'^(.){7,200}$', re.U)
@@ -41,6 +42,43 @@ class Username(validators.UnicodeString):
         if not valid_username.match(value):
             msg = self.message("invalid", state)
             raise validators.Invalid(msg, value, state)
+
+class UsernameAllowEmail(validators.UnicodeString):
+    """Validates that the user input matches ``valid_username`` or an email, strips and
+      coerces to lowercase.
+
+      If it isn't valid, raises an exception::
+
+          >>> UsernameAllowEmail.to_python('%^Inv@l|d')
+          Traceback (most recent call last):
+          ...
+          Invalid: No spaces or funny characters.
+
+      Otherwise strips, coerces to lowercase and returns as unicode::
+
+          >>> UsernameAllowEmail.to_python('Foo ')
+          u'foo'
+
+    """
+
+    messages = {'invalid': 'No spaces or funny characters.'}
+
+    def _to_python(self, value, state):
+        value = super(UsernameAllowEmail, self)._to_python(value, state)
+        return value.strip().lower() if value else value
+
+    def validate_python(self, value, state):
+        super(UsernameAllowEmail, self).validate_python(value, state)
+        email_validator = Email()
+        is_valid_username = valid_username.match(value)
+        if not is_valid_username:
+            try:
+                email = email_validator.to_python(value)
+                return email
+            except:
+                msg = self.message("invalid", state)
+                raise validators.Invalid(msg, value, state)
+            
 
 
 class Password(validators.UnicodeString):
@@ -282,11 +320,23 @@ class Authenticate(FlexibleSchema):
     username = Username(not_empty=True)
     password = Password(not_empty=True)
 
+class AuthenticateAllowEmail(FlexibleSchema):
+    """Form fields to validate when authenticating allowing email over XHR."""
+
+    username = UsernameAllowEmail(not_empty=True)
+    password = Password(not_empty=True)
+
 
 class Login(FlexibleSchema):
     """Form fields to render and validate for login."""
 
     username = Username(not_empty=True)
+    password = Password(not_empty=True)
+
+class LoginAllowEmail(FlexibleSchema):
+    """Form fields to render and validate for login allowing email."""
+
+    username = UsernameAllowEmail(not_empty=True)
     password = Password(not_empty=True)
 
 

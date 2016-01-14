@@ -39,6 +39,7 @@ from sqlalchemy import Unicode
 from sqlalchemy.orm import backref
 from sqlalchemy.orm import mapper
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm import exc as orm_exc
 from sqlalchemy.schema import UniqueConstraint
 
 from zope.interface import implements
@@ -104,6 +105,57 @@ def authenticate(username, raw_password):
     if candidate and pwd_context.verify(raw_password, candidate.password):
         return candidate
     return None
+
+def authenticate_allow_email(username_or_email, raw_password):
+    """Get an authenticated user corresponding to the credentials provided.
+
+      Setup::
+
+          >>> from mock import Mock
+          >>> from pyramid_simpleauth import model
+          >>> _get_existing_user = model.get_existing_user
+          >>> _pwd_context = model.pwd_context
+          >>> model.pwd_context = Mock()
+          >>> model.get_existing_user = Mock()
+          >>> mock_user = Mock()
+
+      If the username doesn't match, returns ``None``::
+
+          >>> model.get_existing_user.return_value = None
+          >>> authenticate('username', 'password')
+
+      If the username does match but the passwords don't, returns ``None``::
+
+          >>> model.get_existing_user.return_value = mock_user
+          >>> model.pwd_context.verify.return_value = False
+          >>> authenticate('username', 'password')
+
+      If the username and the password matches, returns the user::
+
+          >>> model.pwd_context.verify.return_value = True
+          >>> authenticate('username', 'password') == mock_user
+          True
+
+      Teardown::
+
+          >>> model.pwd_context = _pwd_context
+          >>> model.get_existing_user = _get_existing_user
+
+    """
+
+    # Check if it's an email.
+    if '@' in username_or_email:
+        try:
+            user_emails = Email.query.filter_by(address=username_or_email).all()
+            for user_email in user_emails:
+                candidate = user_email.user
+                if pwd_context.verify(raw_password, candidate.password):
+                    return candidate
+        except orm_exc.NoResultFound:
+            pass
+        return None
+    else:
+        return authenticate(username_or_email, raw_password)
 
 def encrypt(raw_password):
     """Encrypt a raw password into a secure hash using passlib.

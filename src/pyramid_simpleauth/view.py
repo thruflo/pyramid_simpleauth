@@ -12,6 +12,7 @@ from pyramid.httpexceptions import HTTPForbidden, HTTPFound, HTTPUnauthorized
 from pyramid.security import unauthenticated_userid
 from pyramid.security import forget, remember
 from pyramid.security import NO_PERMISSION_REQUIRED as PUBLIC
+from pyramid.settings import asbool
 from pyramid.view import view_config
 
 from pyramid_simpleform import Form
@@ -19,6 +20,39 @@ from pyramid_simpleform.renderers import FormRenderer
 
 from pyramid_simpleauth import events, model, schema, tree
 
+
+def authenticate_user(request, username, password):
+    """Chooses the right authentication mechanism based on the
+    configuration and calls it.
+    """
+
+    settings = request.registry.settings
+    if settings and asbool(settings.get('simpleauth.allow_email_login', False)):
+        return model.authenticate_allow_email(username, password)
+    else:
+        return model.authenticate(username, password)
+
+def login_form(request, defaults):
+    """Chooses the right login form based on the
+    configuration and calls it.
+    """
+
+    settings = request.registry.settings
+    if settings and asbool(settings.get('simpleauth.allow_email_login', False)):
+        return Form(request, schema=schema.LoginAllowEmail, defaults=defaults)
+    else:
+        return Form(request, schema=schema.Login, defaults=defaults)
+
+def authenticate_form(request, defaults):
+    """Chooses the right authenticate form based on the
+    configuration and calls it.
+    """
+
+    settings = request.registry.settings
+    if settings and asbool(settings.get('simpleauth.allow_email_login', False)):
+        return Form(request, schema=schema.AuthenticateAllowEmail, defaults=defaults)
+    else:
+        return Form(request, schema=schema.Authenticate, defaults=defaults)
 
 def validate_next_param(request):
     """Validate the next param."""
@@ -33,12 +67,20 @@ def validate_next_param(request):
 def validate_username_param(request):
     """Validate the username param."""
 
+    settings = request.registry.settings
     candidate = request.params.get('username', request.POST.get('username'))
-    try:
-        value = schema.Username.to_python(candidate)
-    except Invalid:
-        value = None
-    return value
+    if settings and asbool(settings.get('simpleauth.allow_email_login', False)):
+        try:
+            value = schema.UsernameAllowEmail.to_python(candidate)
+        except Invalid:
+            value = None
+        return value
+    else:
+        try:
+            value = schema.Username.to_python(candidate)
+        except Invalid:
+            value = None
+        return value
 
 
 def get_redirect_location(request, user=None, route_name='users',
@@ -311,10 +353,10 @@ def authenticate_view(request):
 
     """
 
-    form = Form(request, schema=schema.Authenticate)
+    form = authenticate_form(request, {})
     if form.validate():
         d = form.data
-        user = model.authenticate(d['username'], d['password'])
+        user = authenticate_user(request, d['username'], d['password'])
         if user:
             # Remember the logged in user.
             remember(request, user.canonical_id)
@@ -420,11 +462,11 @@ def login(request):
     if username_param:
         defaults['username'] = username_param
     # Validate the rest of the user input.
-    form = Form(request, schema=schema.Login, defaults=defaults)
+    form = login_form(request, defaults)
     if request.method == 'POST':
         if form.validate():
             d = form.data
-            user = model.authenticate(d['username'], d['password'])
+            user = authenticate_user(request, d['username'], d['password'])
             if user:
                 # Remember the logged in user.
                 headers = remember(request, user.canonical_id)
@@ -531,7 +573,7 @@ def change_password(request):
     if request.method == 'POST':
         if form.validate():
             d = form.data
-            user = model.authenticate(user.username, d['old_password'])
+            user = authenticate_user(request, user.username, d['old_password'])
             if user:
                 # Save new password to the db.
                 user.password = model.encrypt(d['new_password'])
