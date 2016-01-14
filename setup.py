@@ -48,6 +48,11 @@ setup(
         'SQLAlchemy',
         'formencode',
         'passlib',
+        'nose',
+        'mock',
+        'paste',
+        'webtest',
         'pyDNS',
+        'dnspython',
     ]
 )
