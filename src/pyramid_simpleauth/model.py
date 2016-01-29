@@ -16,6 +16,7 @@ __all__ = [
     'generate_unique_digest',
     'get_confirmation_link',
     'get_existing_email',
+    'get_or_create_user_by_email'
 ]
 
 import os
