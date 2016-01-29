@@ -456,41 +456,6 @@ class User(Base, BaseMixin):
 
     preferred_email = property(get_preferred_email, set_preferred_email)
 
-    @classmethod
-    def get_or_create_user_by_email(cls, email):
-        """Gets or creates an user given an email."""
-
-        # If the email is in the database we just return its user.
-        # First try by confirmed then just any email.
-        db_email = Email.query.filter_by(address=email, is_confirmed=True).first()
-        if db_email:
-            return db_email.user
-
-        # Now just by email.
-        db_email = Email.query.filter_by(address=email).first()
-        if db_email:
-            return db_email.user
-
-        # If we got this far it doesn't exist, create a new user...
-        username = generate_random_digest(num_bytes=15)
-
-        # Build a dict with keys that the user_cls.factory method expects.
-        # Note that the raw password will be encrypted before being saved.
-        data = {
-            'password': '',
-            'username': username,
-        }
-
-        user = cls(**data)
-        Session.add(user)
-
-        db_email = Email(user=user, address=email)
-        Session.add(db_email)
-
-        Session.flush()
-
-        return user
-
 
 class Email(Base, BaseMixin):
     """A user's email address with optional confirmation data."""
@@ -628,3 +593,37 @@ def bind_to_orm_events(*args, **kwargs):
     """Setup ORM events once the mapper is configured."""
 
     event.listen(User, 'init', set_canonical_id)
+
+def get_or_create_user_by_email(email, cls=User):
+    """Gets or creates an user given an email."""
+
+    # If the email is in the database we just return its user.
+    # First try by confirmed then just any email.
+    db_email = Email.query.filter_by(address=email, is_confirmed=True).first()
+    if db_email:
+        return db_email.user
+
+    # Now just by email.
+    db_email = Email.query.filter_by(address=email).first()
+    if db_email:
+        return db_email.user
+
+    # If we got this far it doesn't exist, create a new user...
+    username = generate_random_digest(num_bytes=15)
+
+    # Build a dict with keys that the user_cls.factory method expects.
+    # Note that the raw password will be encrypted before being saved.
+    data = {
+        'password': '',
+        'username': username,
+    }
+
+    user = cls(**data)
+    Session.add(user)
+
+    db_email = Email(user=user, address=email)
+    Session.add(db_email)
+
+    Session.flush()
+
+    return user
