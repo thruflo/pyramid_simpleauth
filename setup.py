@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import sys
 from setuptools import setup, find_packages
 
 def _read(file_name):
@@ -9,6 +10,10 @@ def _read(file_name):
     sock.close()
     return text
 
+if sys.version_info[0] == 2:
+    dnspython = "dnspython"
+elif sys.version_info[0] == 3:
+    dnspython = "dnspython3"
 
 setup(
     name='pyramid_simpleauth',
@@ -52,6 +57,6 @@ setup(
         'mock',
         'paste',
         'webtest',
-        'dnspython',
+        dnspython,
     ]
 )

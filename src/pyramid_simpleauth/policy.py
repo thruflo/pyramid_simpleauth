@@ -17,7 +17,10 @@ __all__ = [
 import logging
 logger = logging.getLogger(__name__)
 
-import urlparse
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
 import re
 
 import zope.interface as zi
