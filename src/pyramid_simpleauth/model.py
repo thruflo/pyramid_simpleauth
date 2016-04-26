@@ -147,9 +147,9 @@ def authenticate_allow_email(username_or_email, raw_password):
     # Check if it's an email.
     if '@' in username_or_email:
         try:
-            user_emails = Email.query.filter_by(address=username_or_email).all()
-            for user_email in user_emails:
-                candidate = user_email.user
+            query = Email.query.filter_by(address=username_or_email)
+            candidates = [x.user for x in query if x.user and x.user.password]
+            for candidate in candidates:
                 if pwd_context.verify(raw_password, candidate.password):
                     return candidate
         except orm_exc.NoResultFound:
