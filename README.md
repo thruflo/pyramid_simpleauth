@@ -99,7 +99,7 @@ this base layout template by writing your own, e.g.:
       <body>
         <div class="my-great-markup">
           ${next.body()}
-        </duv>
+        </div>
       </body>
     </html>
     
@@ -183,7 +183,7 @@ going to set these up yourself) use:
 To avoid locking down your app to require a 'view' permission for all views by
 default (secure but perhaps draconian):
 
-    simpleauth.set_default_permission = False
+    simpleauth.set_default_permission = false
 
 # Tests
 
