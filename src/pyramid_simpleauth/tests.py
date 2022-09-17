@@ -201,7 +201,7 @@ class TestSignup(BaseTestCase):
         }
         res = self.app.post('/auth/signup', post_data, status=302)
         assert res  # to satisfy pyflakes
-        # Handler was called with the authentiated user as the second arg.
+        # Handler was called with the authenticated user as the second arg.
         self.assertTrue(mock_subscriber.called)
         event = mock_subscriber.call_args_list[0][0][0]
         self.assertTrue(isinstance(event.user, User))
@@ -299,7 +299,7 @@ class TestLogin(BaseTestCase):
         }
         res = self.app.post('/auth/login', post_data, status=302)
         assert res  # to satisfy pyflakes
-        # Handler was called with the authentiated user as the second arg.
+        # Handler was called with the authenticated user as the second arg.
         self.assertTrue(mock_subscriber.called)
         event = mock_subscriber.call_args_list[0][0][0]
         self.assertTrue(isinstance(event.user, User))
@@ -366,7 +366,7 @@ class TestAuthenticate(BaseTestCase):
         headers = {'X-Requested-With': 'XMLHttpRequest'}
         res = self.app.post('/auth/authenticate', post_data, headers=headers)
         assert res  # to satisfy pyflakes
-        # Handler was called with the authentiated user as the second arg.
+        # Handler was called with the authenticated user as the second arg.
         self.assertTrue(mock_subscriber.called)
         event = mock_subscriber.call_args_list[0][0][0]
         self.assertTrue(isinstance(event.user, User))
@@ -434,7 +434,7 @@ class TestLogout(BaseTestCase):
         # Logout.
         res = self.app.post('/auth/logout', status=302)
         assert res  # to satisfy pyflakes
-        # Handler was called with the authentiated user as the second arg.
+        # Handler was called with the authenticated user as the second arg.
         self.assertTrue(mock_subscriber.called)
         event = mock_subscriber.call_args_list[0][0][0]
         self.assertTrue(isinstance(event.user, User))
@@ -460,7 +460,7 @@ class TestLogout(BaseTestCase):
 class TestChangePassword(BaseTestCase):
 
     def test_wrong_old_password(self):
-        "No password change if old password is not corret"
+        "No password change if old password is not correct"
 
         # Create a user.
         user = self.makeUser('thruflo', 'Password')
@@ -586,7 +586,7 @@ class TestChangePassword(BaseTestCase):
         # Verify logged out.
         self.assertTrue(len(res.headers['Set-Cookie']) < 200)
 
-        # Handler was called with the authentiated user as the second arg.
+        # Handler was called with the authenticated user as the second arg.
         self.assertTrue(mock_subscriber.called)
         event = mock_subscriber.call_args_list[0][0][0]
         self.assertTrue(isinstance(event.user, User))
@@ -744,7 +744,7 @@ class TestPreferEmail(BaseTestCase):
             'email_address': email.address + 'not an email address'
         })
 
-        # Email address should not be prefered
+        # Email address should not be preferred
         self.assertNotEquals(user.preferred_email, email)
 
     def test_prefer_non_persisted_email(self):

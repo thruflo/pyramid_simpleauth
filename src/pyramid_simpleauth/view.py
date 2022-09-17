@@ -136,7 +136,7 @@ def forbidden_view(request):
           >>> mock_request.path = '/forbidden/page'
           >>> mock_request.route_url.return_value = 'http://foo.com/login'
 
-      If the user is already logged in, it means they don't have the requisit
+      If the user is already logged in, it means they don't have the requisite
       permission, so we raise a 403 Forbidden error::
 
           >>> view.unauthenticated_userid.return_value = 1234

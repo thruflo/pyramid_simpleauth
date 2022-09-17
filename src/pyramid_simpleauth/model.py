@@ -521,7 +521,7 @@ class BearerToken(Base, BaseMixin):
     # Has the token been revoked?
     has_been_revoked = Column(Boolean, default=False, nullable=False)
 
-    # Optional: space seperated list of acceptable scopes.
+    # Optional: space separated list of acceptable scopes.
     scope = Column(Unicode(256))
 
     # List of scopes.

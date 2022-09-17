@@ -8,7 +8,7 @@ There are many other auth implementations for Pyramid, including [apex][] and
 following the excellent [pyramid_auth_demo][].  This package aims to be:
 
 * relatively simple: with a limited feature set
-* extensible: with event hooks and overrideable templates
+* extensible: with event hooks and overridable templates
 * performant: minimising db queries
 
 # Features
