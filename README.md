@@ -178,12 +178,12 @@ and traversal, you can expose a user profile view, or perhaps a welcome page at
 To avoid configuring the authorisation and authentication policies (e.g.: if you're
 going to set these up yourself) use:
 
-    simpleauth.set_auth_policies = false
+    simpleauth.set_auth_policies = False
 
 To avoid locking down your app to require a 'view' permission for all views by
 default (secure but perhaps draconian):
 
-    simpleauth.set_default_permission = false
+    simpleauth.set_default_permission = False
 
 # Tests
 
